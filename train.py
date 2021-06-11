@@ -8,16 +8,13 @@ from utils import *
 import constants
 
 # Label map
-voc_labels = ('proper', 'not_porper')
-label_map = {k: v + 1 for v, k in enumerate(voc_labels)}
+masks_labels = ('proper', 'not_porper')
+label_map = {k: v + 1 for v, k in enumerate(masks_labels)}
 label_map['background'] = 0
 rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
 
 distinct_colors = ['#e6194b', '#3cb44b', '#FFFFFF']
 label_color_map = {k: distinct_colors[i] for i, k in enumerate(label_map.keys())}
-
-# Data parameters
-data_folder = constants.TRAIN_IMG_PATH  # folder with data files
 
 # Model parameters
 n_classes = len(label_map)  # number of different types of objects
@@ -34,7 +31,9 @@ decay_lr_at = [80000, 100000]  # decay learning rate after these many iterations
 decay_lr_to = 0.1  # decay learning rate to this fraction of the existing learning rate
 momentum = 0.9  # momentum
 weight_decay = 5e-4  # weight decay
-grad_clip = None  # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) - you will recognize it by a sorting error in the MuliBox loss calculation
+# clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
+# you will recognize it by a sorting error in the MuliBox loss calculation
+grad_clip = None
 
 cudnn.benchmark = True
 
@@ -73,12 +72,13 @@ def main():
     criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy).to(device)
 
     # Custom dataloaders
-    train_dataset = MasksDataset(data_folder, split='train')
+    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers,
                                                pin_memory=True)  # note that we're passing the collate function here
 
-    # Calculate total number of epochs to train and the epochs to decay learning rate at (i.e. convert iterations to epochs)
+    # Calculate total number of epochs to train and the epochs to decay learning rate at
+    # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = iterations // (len(train_dataset) // 32)
@@ -100,6 +100,7 @@ def main():
 
         # Save checkpoint
         save_checkpoint(epoch, model, optimizer)
+
 
 def train(train_loader, model, criterion, optimizer, epoch):
     """
@@ -159,6 +160,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
     del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
+
 
 if __name__ == '__main__':
     main()

@@ -7,6 +7,8 @@ from utils import transform
 import constants
 
 
+# TODO YOTAM: possibly load all to RAM to save some time
+
 class MasksDataset(Dataset):
     """
     call example: MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
