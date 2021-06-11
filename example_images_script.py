@@ -89,3 +89,4 @@ def random_bbox_predict(bbox):
 if __name__ == "__main__":
     data = parse_images_and_bboxes(image_dir)
     show_images_and_bboxes(data, image_dir)
+    # add
