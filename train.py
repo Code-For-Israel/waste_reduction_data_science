@@ -56,7 +56,7 @@ def main():
             else:
                 not_biases.append(param)
     optimizer = torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                lr=lr, momentum=momentum, weight_decay=weight_decay)
+                                lr=lr, momentum=momentum, weight_decay=weight_decay)  # TODO change to Adam
 
     # Move to default device
     model = model.to(device)
@@ -126,6 +126,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # Forward prop.
         predicted_locs, predicted_scores = model(images)  # (N, 8732, 4), (N, 8732, n_classes=3)
+        # TODO YOTAM, GAL: Shoval asked me why doesn't the predicted go through model.detect_objects() as well
+        #  this is kinda weird that the train is different from the eval phase
 
         # Loss
         loss = criterion(predicted_locs, predicted_scores, boxes, labels)  # scalar
@@ -156,6 +158,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                                                                   data_time=data_time, loss=losses))
     del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
 
+
+# TODO
+#  1. Add early stopping based on test metrics / loss
+#  2.
 
 if __name__ == '__main__':
     main()
