@@ -460,7 +460,7 @@ class SSD300(nn.Module):
             max_scores, best_label = predicted_scores[i].max(dim=1)  # (8732)
 
             # Check for each class
-            for c in range(1, self.n_classes):  # TODO 1 and not 0 because we don't want background class?
+            for c in range(1, self.n_classes):  # TODO GAL 1 and not 0 because we don't want background class? why range is until n_classes and not n_classes+1?
                 # Keep only predicted boxes and scores where scores for this class are above the minimum score
                 class_scores = predicted_scores[i][:, c]  # (8732)
                 score_above_min_score = class_scores > min_score  # torch.uint8 (byte) tensor, for indexing

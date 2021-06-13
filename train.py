@@ -127,7 +127,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # Forward prop.
         predicted_locs, predicted_scores = model(images)  # (N, 8732, 4), (N, 8732, n_classes=3)
         # TODO YOTAM, GAL: Shoval asked me why doesn't the predicted go through model.detect_objects() as well
-        #  this is kinda weird that the train is different from the eval phase
+        #  this is kinda weird that the train is different from the eval phase.
+        #  GAL maybe we should try first run the model without detect_objects() to improve all offsets predictions.
 
         # Loss
         loss = criterion(predicted_locs, predicted_scores, boxes, labels)  # scalar

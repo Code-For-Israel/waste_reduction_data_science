@@ -41,7 +41,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                                                                                        top_k=200)
             # Evaluation MUST be at min_score=0.01, max_overlap=0.45, top_k=200 for
             # fair comparison with the paper's results and other repos
-            # TODO YOTAM look what parameters we want
+            # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
 
             # Store this batch's results for accuracy, IoU calculation
             boxes = [b.to(device) for b in boxes]
@@ -57,12 +57,12 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         imgs_orig_sizes = loader.dataset.sizes
 
         # convert from fractional to non-fractional [x_min, y_min, x_max, y_max]
-        predicted_boxes = [box * imgs_orig_sizes[i] for i, box in det_boxes]  # TODO YOTAM verify the shapes
+        predicted_boxes = [box * imgs_orig_sizes[i] for i, box in det_boxes]  # TODO YOTAM verify the shapes. TODO GAL enumerate?
 
-        # convert to [x_min, y_min, w, h] format TODO YOTAM assuming `box` is a list
+        # convert to [x_min, y_min, w, h] format TODO YOTAM assuming `box` is a list. GAL it can be tensor as well need to check
         predicted_boxes = [[box[0], box[1], box[2] - box[0], box[3] - box[1]] for box in predicted_boxes]
 
-        # TODO make sure what's in `det_labels`
+        # TODO make sure what's in `det_labels`. GAL `det_labels` contains 0 (background), 1 (proper), 2 (not proper).
         predicted_labels = ['True' if label == 1 else 'False' for label in det_labels]
 
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
