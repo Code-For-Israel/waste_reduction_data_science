@@ -23,18 +23,24 @@ class MasksDataset(Dataset):
         # Read data file names
         self.images = os.listdir(data_folder)
 
+        # Store images sizes
+        self.sizes = []
+        for path in self.images:
+            image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
+            self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
+
     def __getitem__(self, i):
         image_id, bbox, proper_mask = self.images[i].strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
-        proper_mask = 1 if proper_mask.lower() == "true" else 0
+        proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
         # Read image
         image = Image.open(os.path.join(self.data_folder, self.images[i]), mode='r')
         image = image.convert('RGB')
 
-        box = torch.FloatTensor(bbox)  # (n_objects, 4) TODO YOTAM change comment
-        label = torch.LongTensor(proper_mask)  # (n_objects) TODO YOTAM change comment
+        box = torch.FloatTensor(bbox)  # (1, 4)
+        label = torch.LongTensor(proper_mask)  # (1)
 
         # Apply transformations
         image, box, label = transform(image, box, label, split=self.split)
@@ -48,4 +54,6 @@ class MasksDataset(Dataset):
 if __name__ == '__main__':
     # check MasksDataset class
     dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    next(iter(dataset))
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True,
+                                               num_workers=4, pin_memory=True)
+    (images, boxes, labels) = next(iter(train_loader))

@@ -5,6 +5,7 @@ import torch.utils.data
 from model import SSD300, MultiBoxLoss
 from dataset import MasksDataset
 from utils import *
+from eval import evaluate
 import constants
 
 # Label map
@@ -21,8 +22,7 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-checkpoint = None  # path to model checkpoint, None if none
-batch_size = 8  # batch size
+batch_size = 32  # batch size
 iterations = 120000  # number of iterations to train
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
@@ -42,30 +42,21 @@ def main():
     """
     Training.
     """
-    global start_epoch, label_map, epoch, checkpoint, decay_lr_at
+    global label_map, epoch, decay_lr_at
 
-    # Initialize model or load checkpoint
-    if checkpoint is None:
-        start_epoch = 0
-        model = SSD300(n_classes=n_classes)
-        # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
-        biases = list()
-        not_biases = list()
-        for param_name, param in model.named_parameters():
-            if param.requires_grad:
-                if param_name.endswith('.bias'):
-                    biases.append(param)
-                else:
-                    not_biases.append(param)
-        optimizer = torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                    lr=lr, momentum=momentum, weight_decay=weight_decay)
-
-    else:
-        checkpoint = torch.load(checkpoint)
-        start_epoch = checkpoint['epoch'] + 1
-        print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
-        model = checkpoint['model']
-        optimizer = checkpoint['optimizer']
+    # Initialize model
+    model = SSD300(n_classes=n_classes)
+    # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
+    biases = list()
+    not_biases = list()
+    for param_name, param in model.named_parameters():
+        if param.requires_grad:
+            if param_name.endswith('.bias'):
+                biases.append(param)
+            else:
+                not_biases.append(param)
+    optimizer = torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
+                                lr=lr, momentum=momentum, weight_decay=weight_decay)
 
     # Move to default device
     model = model.to(device)
@@ -74,19 +65,20 @@ def main():
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                               num_workers=workers,
-                                               pin_memory=True)  # note that we're passing the collate function here
+                                               num_workers=workers, pin_memory=True)
+    test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
+                                              num_workers=workers, pin_memory=True)
 
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = iterations // (len(train_dataset) // 32)
+    epochs = 7
     decay_lr_at = [it // (len(train_dataset) // 32) for it in decay_lr_at]
 
     # Epochs
-    for epoch in range(start_epoch, epochs):
-
+    for epoch in range(epochs):
         # Decay learning rate at particular epochs
         if epoch in decay_lr_at:
             adjust_learning_rate(optimizer, decay_lr_to)
@@ -100,6 +92,9 @@ def main():
 
         # Save checkpoint
         save_checkpoint(epoch, model, optimizer)
+
+        # Evaluate test set
+        evaluate(test_loader, model, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
