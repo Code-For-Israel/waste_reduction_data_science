@@ -57,17 +57,20 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         imgs_orig_sizes = loader.dataset.sizes
 
         # convert from fractional to non-fractional [x_min, y_min, x_max, y_max]
-        predicted_boxes = [box * imgs_orig_sizes[i] for i, box in det_boxes]  # TODO YOTAM verify the shapes. TODO GAL enumerate?
+        predicted_boxes = [box * imgs_orig_sizes[i] for i, box in enumerate(det_boxes)]  # TODO YOTAM verify the shapes
 
-        # convert to [x_min, y_min, w, h] format TODO YOTAM assuming `box` is a list. GAL it can be tensor as well need to check
+        # convert to [x_min, y_min, w, h] format TODO YOTAM assuming `box` is a list / tensor (we need to check)
         predicted_boxes = [[box[0], box[1], box[2] - box[0], box[3] - box[1]] for box in predicted_boxes]
 
         # TODO make sure what's in `det_labels`. GAL `det_labels` contains 0 (background), 1 (proper), 2 (not proper).
+        #  pay attention this will give label 'False' also if predicted background (0) - do we want this?
         predicted_labels = ['True' if label == 1 else 'False' for label in det_labels]
 
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
+        # TODO YOTAM verify this one,
+        #  maybe it's better to compare `predicted_labels` and also get thr true labels from filenames
         mean_accuracy = np.mean(np.array(det_labels) == np.array(true_labels))
 
         mean_iou = np.mean([calc_iou(true_box, pred_box) for true_box, pred_box in zip(true_boxes, predicted_boxes)])

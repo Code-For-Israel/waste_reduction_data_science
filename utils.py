@@ -487,8 +487,6 @@ def transform(image, box, label, split):
     new_box = box
     new_label = label
 
-    # TODO YOTAM if split == TRAIN make transformations (crop, flip ...)
-
     # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
     new_image, new_box = resize(new_image, new_box, dims=(300, 300))
 

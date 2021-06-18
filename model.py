@@ -457,10 +457,13 @@ class SSD300(nn.Module):
             image_labels = list()
             image_scores = list()
 
+            # TODO YOTAM variables not used
             max_scores, best_label = predicted_scores[i].max(dim=1)  # (8732)
 
             # Check for each class
-            for c in range(1, self.n_classes):  # TODO GAL 1 and not 0 because we don't want background class? why range is until n_classes and not n_classes+1?
+            # TODO GAL 1 and not 0 because we don't want background class? why range is until n_classes and not n_classes+1?
+            #  YOTAM: that's alright because n.classes = 3 in our case, than in the for you go over c=1, c=2 (proper, not_proper)
+            for c in range(1, self.n_classes):
                 # Keep only predicted boxes and scores where scores for this class are above the minimum score
                 class_scores = predicted_scores[i][:, c]  # (8732)
                 score_above_min_score = class_scores > min_score  # torch.uint8 (byte) tensor, for indexing
@@ -495,6 +498,7 @@ class SSD300(nn.Module):
                     # The max operation retains previously suppressed boxes, like an 'OR' operation
 
                     # Don't suppress this box, even though it has an overlap of 1 with itself
+                    # TODO YOTAM: there's a warning on this line
                     suppress[box] = 0
 
                 # Store only unsuppressed boxes for this class
@@ -577,8 +581,7 @@ class MultiBoxLoss(nn.Module):
         for i in range(batch_size):
             n_objects = boxes[i].size(0)
 
-            overlap = find_jaccard_overlap(boxes[i],
-                                           self.priors_xy)  # (n_objects, 8732)
+            overlap = find_jaccard_overlap(boxes[i], self.priors_xy)  # (n_objects, 8732)
 
             # For each prior, find the object that has the maximum overlap
             overlap_for_each_prior, object_for_each_prior = overlap.max(dim=0)  # (8732)
