@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = os.listdir(data_folder)
+        self.images = os.listdir(data_folder)[:100]  # TODO change
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
@@ -72,6 +72,7 @@ if __name__ == '__main__':
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True,
                                                num_workers=4, pin_memory=True)
     (images, boxes, labels) = next(iter(train_loader))
+    print('done')
     print(dataset.loaded_imgs[-1])
 
     # test

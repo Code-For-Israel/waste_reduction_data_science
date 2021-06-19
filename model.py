@@ -525,6 +525,7 @@ class SSD300(nn.Module):
             #     image_boxes = image_boxes[sort_ind][:top_k]  # (top_k, 4)
             #     image_labels = image_labels[sort_ind][:top_k]  # (top_k)
 
+            # take the most left Bounding Box that passed the last filters
             most_left_index = int(torch.sort(image_boxes, dim=0, descending=False)[1][0][0])
             image_boxes = image_boxes[most_left_index]  # most left
             image_scores = image_scores[most_left_index]
