@@ -23,10 +23,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
 batch_size = 20  # batch size
-iterations = 120000  # number of iterations to train
-# workers = 4  # number of workers for loading data in the DataLoader
+workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 1e-4  # learning rate TODO original was 1e-3, try various
+min_score = 0.2
+lr = 1e-3  # learning rate
 momentum = 0.9  # momentum
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
@@ -44,6 +44,8 @@ def main():
 
     # Initialize model
     model = SSD300(n_classes=n_classes)
+    model.min_score = min_score
+    print(f"min_score = {model.min_score}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
     biases = list()
     not_biases = list()
@@ -63,10 +65,10 @@ def main():
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                               pin_memory=True)  # num_workers=workers, TODO
+                                               num_workers=workers, pin_memory=True)
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                                              pin_memory=True)  # num_workers=workers, TODO
+                                              num_workers=workers, pin_memory=True)
 
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
@@ -87,8 +89,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # if not epoch % 2 == 0:  # every 2nd epoch -- TODO
-        evaluate(test_loader, model, verbose=True)
+        evaluate(test_loader, model, model.min_score, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -143,7 +144,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if i % print_freq == 0:
+        if i % print_freq == 0 or i == len(train_loader) - 1:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -155,7 +156,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
 # TODO
 #  1. Add early stopping based on test metrics / loss
-#  2.
 
 if __name__ == '__main__':
     main()

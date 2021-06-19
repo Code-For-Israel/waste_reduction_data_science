@@ -23,7 +23,13 @@ class MasksDataset(Dataset):
         self.images = os.listdir(data_folder)
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
-            self.images = [path for path in os.listdir(data_folder) if '009266' not in path and '008710' not in path]
+            paths_to_exclude = []
+            for path in self.images:
+                image_id, bbox, proper_mask = path.strip(".jpg").split("__")
+                x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
+                if w <= 0 or h <= 0:
+                    paths_to_exclude.append(path)
+            self.images = [path for path in os.listdir(data_folder) if path not in paths_to_exclude]
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
@@ -32,7 +38,7 @@ class MasksDataset(Dataset):
             futures = [executor.submit(self.load_single_img, path) for path in self.images]
             self.loaded_imgs = [fut.result() for fut in futures]
         self.loaded_imgs = sorted(self.loaded_imgs, key=lambda x: x[0])  # sort the images to reproduce results
-        print(f"Finished loading {self.split} set to memory")
+        print(f"Finished loading {self.split} set to memory - total of {len(self.loaded_imgs)} images")
 
         # Store images sizes
         self.sizes = []
@@ -75,11 +81,8 @@ if __name__ == '__main__':
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True,
                                                num_workers=4, pin_memory=True)
     (images, boxes, labels) = next(iter(train_loader))
-    print('done')
-    print(dataset.loaded_imgs[-1])
 
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=False,
                                               num_workers=4, pin_memory=True)
-    print(dataset.loaded_imgs[-1])

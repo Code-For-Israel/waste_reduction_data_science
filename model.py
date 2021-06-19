@@ -509,7 +509,7 @@ class SSD300(nn.Module):
             # If no object in any class is found, store a placeholder for 'background'
             if len(image_boxes) == 0:
                 image_boxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(device))
-                image_labels.append(torch.LongTensor([0]).to(device))
+                image_labels.append(torch.LongTensor([0]).to(device))  # TODO we should append [1] or [2] I think
                 image_scores.append(torch.FloatTensor([0.]).to(device))
 
             # Concatenate into single tensors
@@ -652,15 +652,6 @@ class MultiBoxLoss(nn.Module):
 
         # As in the paper, averaged over positive priors only, although computed over both positive and hard-negative priors
         conf_loss = (conf_loss_hard_neg.sum() + conf_loss_pos.sum()) / n_positives.sum().float()  # (), scalar
-
-        import numpy as np  # TODO DELETE
-        if conf_loss == np.nan or loc_loss == np.nan or conf_loss >= np.inf or loc_loss >= np.inf or \
-                conf_loss.float() == np.inf or loc_loss.float() == np.inf:
-            print(conf_loss, loc_loss)
-            print(predicted_locs[positive_priors], true_locs[positive_priors])
-            for i in range(true_locs):
-                print(true_locs[i])
-            breakpoint()
 
         # TOTAL LOSS
         return conf_loss + self.alpha * loc_loss

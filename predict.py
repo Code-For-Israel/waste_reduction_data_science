@@ -1,6 +1,4 @@
-import os
 import argparse
-import torch
 import torch.utils.data
 from dataset import MasksDataset
 from eval import evaluate
@@ -38,8 +36,8 @@ model.eval()
 
 # Load data
 dataset = MasksDataset(data_folder=args.input_folder, split='test')
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=False,
-                                         num_workers=4, pin_memory=True)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False,
+                                         num_workers=6, pin_memory=True)
 
 # Evaluate model on given data
-evaluate(dataloader, model, save_csv="prediction.csv", verbose=True)
+evaluate(dataloader, model, model.min_score, save_csv="prediction.csv", verbose=True)
