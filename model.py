@@ -557,7 +557,7 @@ class MultiBoxLoss(nn.Module):
         self.alpha = alpha
 
         self.smooth_l1 = nn.L1Loss()
-        self.cross_entropy = nn.CrossEntropyLoss(reduce=False)
+        self.cross_entropy = nn.CrossEntropyLoss(reduction='none')
 
     def forward(self, predicted_locs, predicted_scores, boxes, labels):
         """
@@ -565,7 +565,7 @@ class MultiBoxLoss(nn.Module):
 
         :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes, a tensor of dimensions (N, 8732, 4)
         :param predicted_scores: class scores for each of the encoded locations/boxes, a tensor of dimensions (N, 8732, n_classes)
-        :param boxes: true  object bounding boxes in boundary coordinates, a list of N tensors # TODO check if list of N tensors
+        :param boxes: true object bounding boxes in boundary coordinates, a list of N tensors
         :param labels: true object labels, a list of N tensors
         :return: multibox loss, a scalar
         """
@@ -616,7 +616,6 @@ class MultiBoxLoss(nn.Module):
         positive_priors = true_classes != 0  # (N, 8732)
 
         # LOCALIZATION LOSS
-
         # Localization loss is computed only over positive (non-background) priors
         loc_loss = self.smooth_l1(predicted_locs[positive_priors], true_locs[positive_priors])  # (), scalar
 
@@ -635,7 +634,8 @@ class MultiBoxLoss(nn.Module):
         n_hard_negatives = self.neg_pos_ratio * n_positives  # (N)
 
         # First, find the loss for all priors
-        conf_loss_all = self.cross_entropy(predicted_scores.view(-1, n_classes), true_classes.view(-1))  # (N * 8732)
+        conf_loss_all = self.cross_entropy(predicted_scores.view(-1, n_classes),
+                                           true_classes.view(-1))  # (N * 8732)
         conf_loss_all = conf_loss_all.view(batch_size, n_priors)  # (N, 8732)
 
         # We already know which priors are positive
@@ -653,6 +653,14 @@ class MultiBoxLoss(nn.Module):
         # As in the paper, averaged over positive priors only, although computed over both positive and hard-negative priors
         conf_loss = (conf_loss_hard_neg.sum() + conf_loss_pos.sum()) / n_positives.sum().float()  # (), scalar
 
-        # TOTAL LOSS
+        import numpy as np  # TODO DELETE
+        if conf_loss == np.nan or loc_loss == np.nan or conf_loss >= np.inf or loc_loss >= np.inf or \
+                conf_loss.float() == np.inf or loc_loss.float() == np.inf:
+            print(conf_loss, loc_loss)
+            print(predicted_locs[positive_priors], true_locs[positive_priors])
+            for i in range(true_locs):
+                print(true_locs[i])
+            breakpoint()
 
+        # TOTAL LOSS
         return conf_loss + self.alpha * loc_loss

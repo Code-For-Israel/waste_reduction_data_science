@@ -11,3 +11,4 @@ dependencies:
       - pandas
       - opencv-python
       - matplotlib
+#      - pydev-pycharm

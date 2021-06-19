@@ -21,6 +21,9 @@ class MasksDataset(Dataset):
 
         # Read data file names
         self.images = os.listdir(data_folder)
+        if self.split == 'TRAIN':
+            # exclude problematic images with width or heigh equal to 0
+            self.images = [path for path in os.listdir(data_folder) if '009266' not in path and '008710' not in path]
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []

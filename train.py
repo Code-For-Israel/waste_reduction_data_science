@@ -22,13 +22,11 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 8  # batch size
+batch_size = 20  # batch size
 iterations = 120000  # number of iterations to train
-workers = 4  # number of workers for loading data in the DataLoader
+# workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 1e-3  # learning rate
-decay_lr_at = [80000, 100000]  # decay learning rate after these many iterations
-decay_lr_to = 0.1  # decay learning rate to this fraction of the existing learning rate
+lr = 1e-4  # learning rate TODO original was 1e-3, try various
 momentum = 0.9  # momentum
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
@@ -55,8 +53,8 @@ def main():
                 biases.append(param)
             else:
                 not_biases.append(param)
-    optimizer = torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                lr=lr, momentum=momentum, weight_decay=weight_decay)  # TODO change to Adam
+    optimizer = torch.optim.Adam(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
+                                 lr=lr, weight_decay=weight_decay)  # TODO SGD with momentum=momentum \ Adam
 
     # Move to default device
     model = model.to(device)
@@ -65,24 +63,19 @@ def main():
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                               num_workers=workers, pin_memory=True)
+                                               pin_memory=True)  # num_workers=workers, TODO
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                                              num_workers=workers, pin_memory=True)
+                                              pin_memory=True)  # num_workers=workers, TODO
 
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = 7  # TODO change
-    decay_lr_at = [it // (len(train_dataset) // batch_size) for it in decay_lr_at]
 
     # Epochs
     for epoch in range(epochs):
-        # Decay learning rate at particular epochs
-        if epoch in decay_lr_at:
-            adjust_learning_rate(optimizer, decay_lr_to)
-
         # One epoch's training
         train(train_loader=train_loader,
               model=model,
@@ -94,6 +87,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
+        # if not epoch % 2 == 0:  # every 2nd epoch -- TODO
         evaluate(test_loader, model, verbose=True)
 
 
