@@ -2,8 +2,10 @@ from torch import nn
 from utils import *
 import torch.nn.functional as F
 from math import sqrt
-from itertools import product as product
 import torchvision
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)  # to ignore the .to(dtype=torch.uint8) warning message
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -99,7 +101,7 @@ class VGGBase(nn.Module):
         param_names = list(state_dict.keys())
 
         # Pretrained VGG base
-        pretrained_state_dict = torchvision.models.vgg16(pretrained=False).state_dict()  # TODO moved to false
+        pretrained_state_dict = torchvision.models.vgg16(pretrained=False).state_dict()
         pretrained_param_names = list(pretrained_state_dict.keys())
 
         # Transfer conv. parameters from pretrained model to current model
@@ -491,14 +493,12 @@ class SSD300(nn.Module):
                     # If this box is already marked for suppression
                     if suppress[box] == 1:
                         continue
-
                     # Suppress boxes whose overlaps (with this box) are greater than maximum overlap
                     # Find such boxes and update suppress indices
-                    suppress = torch.max(suppress, overlap[box] > max_overlap)
+                    suppress = torch.max(suppress, (overlap[box] > max_overlap).to(dtype=torch.uint8))
                     # The max operation retains previously suppressed boxes, like an 'OR' operation
 
                     # Don't suppress this box, even though it has an overlap of 1 with itself
-                    # TODO YOTAM: there's a warning on this line
                     suppress[box] = 0
 
                 # Store only unsuppressed boxes for this class

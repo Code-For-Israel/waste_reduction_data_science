@@ -57,10 +57,11 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         imgs_orig_sizes = loader.dataset.sizes
 
         # convert from fractional to non-fractional [x_min, y_min, x_max, y_max]
-        predicted_boxes = [box * imgs_orig_sizes[i] for i, box in enumerate(det_boxes)]  # TODO YOTAM verify the shapes
+        predicted_boxes = [box * imgs_orig_sizes[i].to(device) for i, box in enumerate(det_boxes)]
 
-        # convert to [x_min, y_min, w, h] format TODO YOTAM assuming `box` is a list / tensor (we need to check)
-        predicted_boxes = [[box[0], box[1], box[2] - box[0], box[3] - box[1]] for box in predicted_boxes]
+        # convert to [x_min, y_min, w, h] format
+        predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in
+                           predicted_boxes]
 
         # TODO make sure what's in `det_labels`. GAL `det_labels` contains 0 (background), 1 (proper), 2 (not proper).
         #  pay attention this will give label 'False' also if predicted background (0) - do we want this?
@@ -70,10 +71,12 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
         # TODO YOTAM verify this one,
-        #  maybe it's better to compare `predicted_labels` and also get thr true labels from filenames
-        mean_accuracy = np.mean(np.array(det_labels) == np.array(true_labels))
+        #  maybe it's better to compare `predicted_labels` and also get the true labels from filenames
+        mean_accuracy = np.mean(torch.cat([(pred == true).cpu()
+                                           for pred, true in zip(det_labels, true_labels)]).numpy())
 
-        mean_iou = np.mean([calc_iou(true_box, pred_box) for true_box, pred_box in zip(true_boxes, predicted_boxes)])
+        mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
+                            for true_box, pred_box in zip(true_boxes, predicted_boxes)])
 
         if verbose:
             print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
@@ -84,5 +87,5 @@ def evaluate(loader, model, save_csv=False, verbose=False):
             results.x, results.y, results.w, results.h = zip(*predicted_boxes)
             results.proper_mask = predicted_labels
             results.to_csv(save_csv, index=False, header=True)
-
+            print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
         return mean_accuracy, mean_iou

@@ -22,7 +22,7 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 32  # batch size
+batch_size = 8  # batch size
 iterations = 120000  # number of iterations to train
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
@@ -74,8 +74,8 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 1  # TODO change
-    decay_lr_at = [it // (len(train_dataset) // 32) for it in decay_lr_at]
+    epochs = 7  # TODO change
+    decay_lr_at = [it // (len(train_dataset) // batch_size) for it in decay_lr_at]
 
     # Epochs
     for epoch in range(epochs):
@@ -91,7 +91,7 @@ def main():
               epoch=epoch)
 
         # Save checkpoint
-        save_checkpoint(epoch, model, optimizer)
+        save_checkpoint(epoch, model)
 
         # Evaluate test set
         evaluate(test_loader, model, verbose=True)
@@ -118,7 +118,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
     # Batches
     for i, (images, boxes, labels) in enumerate(train_loader):
         data_time.update(time.time() - start)
-        print(device) #
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
         boxes = [b.to(device) for b in boxes]

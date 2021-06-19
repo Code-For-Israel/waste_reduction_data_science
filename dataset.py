@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = os.listdir(data_folder)[:100]  # TODO change
+        self.images = os.listdir(data_folder)
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
