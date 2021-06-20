@@ -58,7 +58,6 @@ def show_images_and_bboxes(data, image_dir):
         fig.legend()
         plt.show()
 
-
 def random_bbox_predict(bbox):
     """
     Randomly predicts a bounding box given a ground truth bounding box.

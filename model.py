@@ -478,8 +478,8 @@ class SSD300(nn.Module):
                 class_decoded_locs = decoded_locs[score_above_min_score]  # (n_qualified, 4)
 
                 # Sort predicted boxes and scores by scores # TODO not necessary for our case
-                class_scores, sort_ind = class_scores.sort(dim=0, descending=True)  # (n_qualified), (n_min_score)
-                class_decoded_locs = class_decoded_locs[sort_ind]  # (n_min_score, 4)
+                # class_scores, sort_ind = class_scores.sort(dim=0, descending=True)  # (n_qualified), (n_min_score)
+                # class_decoded_locs = class_decoded_locs[sort_ind]  # (n_min_score, 4)
 
                 # Find the overlap between predicted boxes
                 overlap = find_jaccard_overlap(class_decoded_locs, class_decoded_locs)  # (n_qualified, n_min_score)
@@ -573,7 +573,7 @@ class MultiBoxLoss(nn.Module):
         :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes, a tensor of dimensions (N, 8732, 4)
         :param predicted_scores: class scores for each of the encoded locations/boxes, a tensor of dimensions (N, 8732, n_classes)
         :param boxes: true object bounding boxes in boundary coordinates, a list of N tensors
-        :param labels: true object labels, a list of N tensors
+        :param labels: true object labels, a list of N tensors with one value
         :return: multibox loss, a scalar
         """
         batch_size = predicted_locs.size(0)

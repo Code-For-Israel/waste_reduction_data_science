@@ -25,7 +25,7 @@ label_color_map = {k: distinct_colors[i] for i, k in enumerate(label_map.keys())
 # Model parameters
 n_classes = len(label_map)  # number of different types of objects
 min_score = 0.01  # TODO modify before run
-topk = 200  # TODO modify before run
+topk = 10  # TODO modify before run
 
 # Load model checkpoint that is to be evaluated
 checkpoint = torch.load(checkpoint)

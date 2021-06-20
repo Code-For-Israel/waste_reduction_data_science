@@ -271,7 +271,22 @@ class Encoder(object):
 
         _, max_ids = scores_out.sort(dim=0)
         max_ids = max_ids[-max_output:]
-        return bboxes_out[max_ids, :], labels_out[max_ids], scores_out[max_ids]
+
+        bboxes_out = bboxes_out[max_ids, :]
+        labels_out = labels_out[max_ids]
+        scores_out = scores_out[max_ids]
+
+        # TODO need to check this works
+        _, most_left_ids = bboxes_out.sort(dim=0)
+        most_left_ids = most_left_ids[0][0]
+
+        # # take the most left Bounding Box that passed the last filters
+        # most_left_index = int(torch.sort(image_boxes, dim=0, descending=False)[1][0][0])
+        # bboxes_out = bboxes_out[most_left_index]  # most left
+        # scores_out = scores_out[most_left_index]
+        # labels_out = labels_out[most_left_index]
+
+        return bboxes_out, labels_out, scores_out
 
 
 """
