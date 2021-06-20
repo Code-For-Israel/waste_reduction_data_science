@@ -2,7 +2,7 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-from model import SSD300, MultiBoxLoss
+from model import SSD300, Loss
 from dataset import MasksDataset
 from utils import *
 from eval import evaluate
@@ -32,7 +32,7 @@ lr = 1e-3  # learning rate TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
-grad_clip = None
+grad_clip = None  # TODO
 
 cudnn.benchmark = True
 
@@ -50,7 +50,7 @@ def main():
     global label_map, epoch, decay_lr_at, checkpoint
 
     # Initialize model
-    model = SSD300(n_classes=n_classes)
+    model = SSD300().to(device)
     if checkpoint:
         checkpoint = torch.load(checkpoint)
         model.load_state_dict(checkpoint['state_dict'])
@@ -68,9 +68,8 @@ def main():
     optimizer = torch.optim.Adam(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
                                  lr=lr, weight_decay=weight_decay)  # TODO SGD with momentum=momentum \ Adam
 
-    # Move to default device
-    model = model.to(device)
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=1.).to(device)  # TODO original alpha is 1.
+    boxes = create_boxes()
+    criterion = Loss(boxes).to(device)
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
@@ -99,9 +98,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # TODO change to test_loader, Remove if
-        if not epoch % 40 and epoch != 0:
-            evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
+        # TODO
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -127,17 +124,18 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = [b.to(device) for b in boxes]
-        labels = [l.to(device) for l in labels]
+        boxes = boxes.to(device)
+        labels = labels.to(device)
 
-        # Forward prop.
-        predicted_locs, predicted_scores = model(images)  # (N, 8732, 4), (N, 8732, n_classes=3)
-        # TODO YOTAM, GAL: Shoval asked me why doesn't the predicted go through model.detect_objects() as well
-        #  this is kinda weird that the train is different from the eval phase.
-        #  GAL maybe we should try first run the model without detect_objects() to improve all offsets predictions.
+        # predicted
+        ploc, plabel = model(images)  # ploc, plabel: Nx4x8732, Nxlabel_numx8732
 
-        # Loss
-        loss = criterion(predicted_locs, predicted_scores, boxes, labels)  # scalar
+        # ground truth
+        gloc = boxes.expand(-1, 8732, 4).reshape(-1, 4, 8732).to(device)  # Nx4x8732
+        glabel = labels.expand(-1, 8732).to(device)  # Nx8732
+
+        # loss
+        loss = criterion(ploc, plabel, gloc, glabel)
 
         # Backward prop.
         optimizer.zero_grad()
@@ -156,14 +154,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if (i % print_freq == 0 or i == len(train_loader) - 1) and i != 0:
+        if i % print_freq == 0 or i == len(train_loader) - 1:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader),
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
-    del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
+    del ploc, plabel, images, boxes, labels  # free some memory since their histories may be stored
 
 
 # TODO
