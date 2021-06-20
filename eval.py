@@ -5,13 +5,14 @@ import numpy as np
 import pandas as pd
 
 
-def evaluate(loader, model, min_score, save_csv=False, verbose=False):
+def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
     """
     Evaluate.
 
     :param loader: DataLoader for test data, created with shuffle=False
     :param model: model
     :param min_score: minimum score for detect_objects()
+    :param topk: take k top boxes by scores per image
     :param save_csv: False or path to save file with predicted results
     :param verbose: whether to print IoU and accuracy or not
     return mean_accuracy, mean_iou for all the data in `loader`
@@ -40,7 +41,7 @@ def evaluate(loader, model, min_score, save_csv=False, verbose=False):
             det_boxes_batch, det_labels_batch, det_scores_batch = model.detect_objects(predicted_locs, predicted_scores,
                                                                                        min_score=min_score,
                                                                                        max_overlap=0.45,
-                                                                                       top_k=200)
+                                                                                       top_k=topk)
             # Evaluation MUST be at min_score=0.01, max_overlap=0.45, top_k=200 for
             # fair comparison with the paper's results and other repos
             # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low

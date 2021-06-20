@@ -25,7 +25,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 20  # batch size
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-min_score = 0.2
+min_score = 0.01
+topk = 20
 lr = 1e-3  # learning rate
 momentum = 0.9  # momentum
 weight_decay = 5e-4  # weight decay
@@ -44,8 +45,8 @@ def main():
 
     # Initialize model
     model = SSD300(n_classes=n_classes)
-    model.min_score = min_score
-    print(f"min_score = {model.min_score}")
+    print(f"min_score = {min_score}")
+    print(f"top_k = {topk}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
     biases = list()
     not_biases = list()
@@ -74,7 +75,7 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 7  # TODO change
+    epochs = 40  # TODO change
 
     # Epochs
     for epoch in range(epochs):
@@ -89,7 +90,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        evaluate(test_loader, model, model.min_score, verbose=True)
+        evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):

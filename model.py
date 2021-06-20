@@ -449,6 +449,8 @@ class SSD300(nn.Module):
 
         assert n_priors == predicted_locs.size(1) == predicted_scores.size(1)
 
+        no_boxes_counter = 0
+
         for i in range(batch_size):
             # Decode object coordinates from the form we regressed predicted boxes to
             decoded_locs = cxcy_to_xy(
@@ -508,6 +510,7 @@ class SSD300(nn.Module):
 
             # If no object in any class is found, store a placeholder for 'background'
             if len(image_boxes) == 0:
+                no_boxes_counter += 1
                 image_boxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(device))
                 image_labels.append(torch.LongTensor([0]).to(device))  # TODO we should append [1] or [2] I think
                 image_scores.append(torch.FloatTensor([0.]).to(device))
@@ -519,11 +522,11 @@ class SSD300(nn.Module):
             n_objects = image_scores.size(0)
 
             # Keep only the top k objects
-            # if n_objects > top_k:
-            #     image_scores, sort_ind = image_scores.sort(dim=0, descending=True)
-            #     image_scores = image_scores[:top_k]  # (top_k)
-            #     image_boxes = image_boxes[sort_ind][:top_k]  # (top_k, 4)
-            #     image_labels = image_labels[sort_ind][:top_k]  # (top_k)
+            if n_objects > top_k:
+                image_scores, sort_ind = image_scores.sort(dim=0, descending=True)
+                image_scores = image_scores[:top_k]  # (top_k)
+                image_boxes = image_boxes[sort_ind][:top_k]  # (top_k, 4)
+                image_labels = image_labels[sort_ind][:top_k]  # (top_k)
 
             # take the most left Bounding Box that passed the last filters
             most_left_index = int(torch.sort(image_boxes, dim=0, descending=False)[1][0][0])
@@ -536,6 +539,8 @@ class SSD300(nn.Module):
             all_images_labels.append(image_labels)
             all_images_scores.append(image_scores)
 
+        if no_boxes_counter > 0:
+            print(f'found no boxes to {no_boxes_counter}/{len(batch_size)} images in batch')
         return all_images_boxes, all_images_labels, all_images_scores  # lists of length batch_size
 
 

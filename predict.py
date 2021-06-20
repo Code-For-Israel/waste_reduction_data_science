@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 # Define device and checkpoint path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = 'checkpoint_ssd300_epoch=1.pth.tar'  # TODO YOTAM change
+checkpoint = 'checkpoint_ssd300_epoch=3.pth.tar'  # TODO YOTAM change
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -24,6 +24,8 @@ label_color_map = {k: distinct_colors[i] for i, k in enumerate(label_map.keys())
 
 # Model parameters
 n_classes = len(label_map)  # number of different types of objects
+min_score = 0.1
+topk = 20
 
 # Load model checkpoint that is to be evaluated
 checkpoint = torch.load(checkpoint)
@@ -40,4 +42,5 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False,
                                          num_workers=6, pin_memory=True)
 
 # Evaluate model on given data
-evaluate(dataloader, model, model.min_score, save_csv="prediction.csv", verbose=True)
+print(f"Evaluating data from path {args.input_folder}, min_score={min_score}, top_k={topk}")
+evaluate(dataloader, model, min_score=min_score, topk=topk, save_csv="prediction.csv", verbose=True)
