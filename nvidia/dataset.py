@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = os.listdir(data_folder)[:20]  # TODO
+        self.images = os.listdir(data_folder)
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             paths_to_exclude = []
@@ -48,7 +48,6 @@ class MasksDataset(Dataset):
 
     def __getitem__(self, i):
         sample = self.loaded_imgs[i]
-        # TODO YOTAM if split == TRAIN make transformations (crop, flip ...)
 
         if self.split == 'TRAIN':
             img = sample[1]
@@ -84,7 +83,7 @@ if __name__ == '__main__':
     # total of ~22GB RAM are needed
     # train
     dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=True)
     # (images, boxes, labels) = next(iter(train_loader))
 
     mean = 0.
@@ -106,4 +105,4 @@ if __name__ == '__main__':
 
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=False)

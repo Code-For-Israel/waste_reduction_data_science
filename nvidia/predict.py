@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 # Define device and checkpoint path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = 'checkpoint_ssd300_epoch=3.pth.tar'  # TODO YOTAM change
+checkpoint = 'checkpoint_nvidia_ssd300_epoch=<epoch>.pth.tar'  # TODO YOTAM change
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -38,7 +38,7 @@ model.eval()
 
 # Load data
 dataset = MasksDataset(data_folder=args.input_folder, split='test')
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False,
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=False,
                                          num_workers=6, pin_memory=True)
 
 # Evaluate model on given data
