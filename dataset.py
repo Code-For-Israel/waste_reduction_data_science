@@ -52,7 +52,7 @@ class MasksDataset(Dataset):
 
         if self.split == 'TRAIN':
             img = sample[1]
-            pass  # TODO Augmentation on img - make a copy first (!!!!!!)
+            # TODO Augmentation on img - make a copy first (!!!!!!)
             return img, sample[2], sample[3]
         else:  # TEST
             return sample[1], sample[2], sample[3]  # image, box, label
@@ -84,11 +84,26 @@ if __name__ == '__main__':
     # total of ~22GB RAM are needed
     # train
     dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True,
-                                               num_workers=4, pin_memory=True)
-    (images, boxes, labels) = next(iter(train_loader))
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True)
+    # (images, boxes, labels) = next(iter(train_loader))
+
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+    for i, (images, boxes, labels) in enumerate(train_loader):
+        data = images
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
+
+    print('train pixel mean values', mean)
+    print('train pixel std values', std)
 
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=False,
-                                              num_workers=4, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False)

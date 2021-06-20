@@ -36,15 +36,24 @@ grad_clip = None
 
 cudnn.benchmark = True
 
+checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
+if checkpoint:
+    start_epoch = int(checkpoint.split('=')[-1].split('.')[0])
+else:
+    start_epoch = 0
+
 
 def main():
     """
     Training.
     """
-    global label_map, epoch, decay_lr_at
+    global label_map, epoch, decay_lr_at, checkpoint
 
     # Initialize model
     model = SSD300(n_classes=n_classes)
+    if checkpoint:
+        checkpoint = torch.load(checkpoint)
+        model.load_state_dict(checkpoint['state_dict'])
     print(f"min_score = {min_score}")
     print(f"top_k = {topk}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
@@ -78,7 +87,7 @@ def main():
     epochs = 100  # TODO change
 
     # Epochs
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         # One epoch's training
         train(train_loader=train_loader,
               model=model,
@@ -91,7 +100,7 @@ def main():
 
         # Evaluate test set
         # TODO change to test_loader, Remove if
-        if not epoch % 20:
+        if not epoch % 40 and epoch != 0:
             evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
 
 
@@ -147,7 +156,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if i % print_freq == 0 or i == len(train_loader) - 1:
+        if (i % print_freq == 0 or i == len(train_loader) - 1) and i != 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
