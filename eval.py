@@ -66,17 +66,14 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
         predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in
                            predicted_boxes]
 
-        # TODO make sure what's in `det_labels`. GAL `det_labels` contains 0 (background), 1 (proper), 2 (not proper).
-        #  pay attention this will give label 'False' also if predicted background (0) - do we want this?
+        # TODO make sure what's the best guess
         predicted_labels = ['True' if label == 1 else 'False' for label in det_labels]
 
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
-        # TODO YOTAM verify this one,
-        #  maybe it's better to compare `predicted_labels` and also get the true labels from filenames
-        mean_accuracy = np.mean(torch.cat([(pred == true).cpu()
-                                           for pred, true in zip(det_labels, true_labels)]).numpy())
+        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels)]
+        mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
 
         mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
                             for true_box, pred_box in zip(true_boxes, predicted_boxes)])

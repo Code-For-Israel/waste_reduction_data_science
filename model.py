@@ -511,8 +511,10 @@ class SSD300(nn.Module):
             # If no object in any class is found, store a placeholder for 'background'
             if len(image_boxes) == 0:
                 no_boxes_counter += 1
+                # TODO what is the best 'guess' when no boxes found
                 image_boxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(device))
-                image_labels.append(torch.LongTensor([0]).to(device))  # TODO we should append [1] or [2] I think
+                # We predict 0 which is background
+                image_labels.append(torch.LongTensor([0]).to(device))
                 image_scores.append(torch.FloatTensor([0.]).to(device))
 
             # Concatenate into single tensors
@@ -540,7 +542,7 @@ class SSD300(nn.Module):
             all_images_scores.append(image_scores)
 
         if no_boxes_counter > 0:
-            print(f'found no boxes to {no_boxes_counter}/{len(batch_size)} images in batch')
+            print(f'\n[INFO] found no boxes to {no_boxes_counter}/{batch_size} images in batch')
         return all_images_boxes, all_images_labels, all_images_scores  # lists of length batch_size
 
 
@@ -561,7 +563,7 @@ class MultiBoxLoss(nn.Module):
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
 
-        self.smooth_l1 = nn.L1Loss()
+        self.smooth_l1 = nn.L1Loss(reduction='mean')  # TODO possibly use reduction='none' ('mean' is default)
         self.cross_entropy = nn.CrossEntropyLoss(reduction='none')
 
     def forward(self, predicted_locs, predicted_scores, boxes, labels):

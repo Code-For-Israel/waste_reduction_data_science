@@ -26,9 +26,9 @@ batch_size = 20  # batch size
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
 min_score = 0.01
-topk = 20
-lr = 1e-3  # learning rate
-momentum = 0.9  # momentum
+topk = 200
+lr = 1e-3  # learning rate TODO
+# momentum = 0.9  # momentum TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -61,7 +61,7 @@ def main():
 
     # Move to default device
     model = model.to(device)
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy).to(device)
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=1.).to(device)  # TODO original alpha is 1.
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
@@ -75,7 +75,7 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 40  # TODO change
+    epochs = 100  # TODO change
 
     # Epochs
     for epoch in range(epochs):
@@ -90,7 +90,9 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
+        # TODO change to test_loader, Remove if
+        if not epoch % 20:
+            evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):

@@ -29,7 +29,7 @@ class MasksDataset(Dataset):
                 x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
                 if w <= 0 or h <= 0:
                     paths_to_exclude.append(path)
-            self.images = [path for path in os.listdir(data_folder) if path not in paths_to_exclude]
+            self.images = [path for path in self.images if path not in paths_to_exclude]
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
@@ -49,7 +49,13 @@ class MasksDataset(Dataset):
     def __getitem__(self, i):
         sample = self.loaded_imgs[i]
         # TODO YOTAM if split == TRAIN make transformations (crop, flip ...)
-        return sample[1], sample[2], sample[3]  # image, box, label
+
+        if self.split == 'TRAIN':
+            img = sample[1]
+            pass  # TODO Augmentation on img - make a copy first (!!!!!!)
+            return img, sample[2], sample[3]
+        else:  # TEST
+            return sample[1], sample[2], sample[3]  # image, box, label
 
     def __len__(self):
         return len(self.images)
