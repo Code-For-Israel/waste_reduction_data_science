@@ -819,7 +819,7 @@ def save_checkpoint(epoch, model):
     :param epoch: epoch number
     :param model: model
     """
-    filename = f'checkpoint_ssd300_epoch={epoch + 1}.pth.tar'
+    filename = f'checkpoint_nvidia_ssd300_epoch={epoch + 1}.pth.tar'
     torch.save({'state_dict': model.state_dict()}, filename)
 
 
