@@ -25,8 +25,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 20  # batch size
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-min_score = 0.01
-topk = 200
+min_score = 0.15  # TODO
+topk = 10
 lr = 1e-3  # learning rate TODO
 # momentum = 0.9  # momentum TODO
 weight_decay = 5e-4  # weight decay
@@ -84,7 +84,7 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 100  # TODO change
+    epochs = 5  # TODO change
 
     # Epochs
     for epoch in range(start_epoch, epochs):
