@@ -47,16 +47,20 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
-        # get sample from saved object
-        image_id, image, box, label = self.loaded_imgs[i]  # str, PIL.image, tensor, tensor
+        if self.split == 'TRAIN':
+            # get sample from saved object
+            image_id, image, box, label = self.loaded_imgs[i]  # str, PIL.image, tensor, tensor
 
-        # copy sample to avoid making changes to original data
-        new_image, new_box, new_label = image.copy(), box.clone(), label.clone()
+            # copy sample to avoid making changes to original data
+            new_image, new_box, new_label = image.copy(), box.clone(), label.clone()
 
-        # Apply transformations
-        new_image, new_box, new_label = transform(new_image, new_box, new_label, split=self.split)
-
-        return new_image, new_box, new_label
+            # Apply transformations
+            new_image, new_box, new_label = transform(new_image, new_box, new_label, split=self.split)
+            return new_image, new_box, new_label
+        else:
+            # get sample from saved object
+            image_id, image, box, label = self.loaded_imgs[i]  # str, tensor, tensor, tensor
+            return image, box, label
 
     def __len__(self):
         return len(self.images)
@@ -65,7 +69,7 @@ class MasksDataset(Dataset):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
-        bbox = [number if number != 0 else 1e-20 for number in bbox]
+        bbox = [number if number != 0 else 1e-20 for number in bbox]  # to avoid inf in smooth_l1 in loss function
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
         # Read image
@@ -74,7 +78,21 @@ class MasksDataset(Dataset):
         box = torch.FloatTensor([bbox])  # (1, 4)
         label = torch.LongTensor(proper_mask)  # (1)
 
-        return image_id, image, box, label  # str, PIL.image, tensor, tensor
+        if self.split == 'TRAIN':
+            return image_id, image, box, label  # str, PIL.image, tensor, tensor
+        else:
+            mean = [0.1723, 0.1535, 0.3206]
+            std = [1.1535, 1.1641, 1.1382]
+
+            # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
+            new_image, new_box = resize(image, box, dims=(300, 300))
+
+            # Convert PIL image to Torch tensor
+            new_image = FT.to_tensor(new_image)
+
+            # Normalize by mean and standard deviation of ImageNet data that our base VGG was trained on
+            new_image = FT.normalize(new_image, mean=mean, std=std)
+            return image_id, new_image, new_box, label
 
 
 if __name__ == '__main__':

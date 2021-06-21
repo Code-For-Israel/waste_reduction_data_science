@@ -296,9 +296,7 @@ class Encoder(object):
 
 
 
-
-
-
+OLD SSD330
 
 
 
@@ -637,72 +635,73 @@ def random_crop(image, boxes, labels):
     original_h = image.size(1)
     original_w = image.size(2)
     # Keep choosing a minimum overlap until a successful crop is made
-    while True:
-        # Randomly draw the value for minimum overlap
-        min_overlap = random.choice([0., .1, .3, .5, .7, .9, None])  # 'None' refers to no cropping
+    # Randomly draw the value for minimum overlap
+    min_overlap = random.choice([.5, .7, .9, None])  # 'None' refers to no cropping
 
-        # If not cropping
-        if min_overlap is None:
-            return image, boxes, labels
+    # If not cropping
+    if min_overlap is None:
+        return image, boxes, labels
 
-        # Try up to 50 times for this choice of minimum overlap
-        # This isn't mentioned in the paper, of course, but 50 is chosen in paper authors' original Caffe repo
-        max_trials = 50
-        for _ in range(max_trials):
-            # Crop dimensions must be in [0.3, 1] of original dimensions
-            # Note - it's [0.1, 1] in the paper, but actually [0.3, 1] in the authors' repo
-            min_scale = 0.3
-            scale_h = random.uniform(min_scale, 1)
-            scale_w = random.uniform(min_scale, 1)
-            new_h = int(scale_h * original_h)
-            new_w = int(scale_w * original_w)
+    # Try up to 50 times for this choice of minimum overlap
+    # This isn't mentioned in the paper, of course, but 50 is chosen in paper authors' original Caffe repo
+    max_trials = 50
+    for _ in range(max_trials):
+        # Crop dimensions must be in [0.3, 1] of original dimensions
+        # Note - it's [0.1, 1] in the paper, but actually [0.3, 1] in the authors' repo
+        min_scale = 0.3
+        scale_h = random.uniform(min_scale, 1)
+        scale_w = random.uniform(min_scale, 1)
+        new_h = int(scale_h * original_h)
+        new_w = int(scale_w * original_w)
 
-            # Aspect ratio has to be in [0.5, 2]
-            aspect_ratio = new_h / new_w
-            if not 0.5 < aspect_ratio < 2:
-                continue
+        # Aspect ratio has to be in [0.5, 2]
+        aspect_ratio = new_h / new_w
+        if not 0.5 < aspect_ratio < 2:
+            continue
 
-            # Crop coordinates (origin at top-left of image)
-            left = random.randint(0, original_w - new_w)
-            right = left + new_w
-            top = random.randint(0, original_h - new_h)
-            bottom = top + new_h
-            crop = torch.FloatTensor([left, top, right, bottom])  # (4)
+        # Crop coordinates (origin at top-left of image)
+        left = random.randint(0, original_w - new_w)
+        right = left + new_w
+        top = random.randint(0, original_h - new_h)
+        bottom = top + new_h
+        crop = torch.FloatTensor([left, top, right, bottom])  # (4)
 
-            # Calculate Jaccard overlap between the crop and the bounding boxes
-            overlap = find_jaccard_overlap(crop.unsqueeze(0),
-                                           boxes)  # (1, n_objects), n_objects is the no. of objects in this image
-            overlap = overlap.squeeze(0)  # (n_objects)
+        # Calculate Jaccard overlap between the crop and the bounding boxes
+        overlap = find_jaccard_overlap(crop.unsqueeze(0),
+                                       boxes)  # (1, n_objects), n_objects is the no. of objects in this image
+        overlap = overlap.squeeze(0)  # (n_objects)
 
-            # If not a single bounding box has a Jaccard overlap of greater than the minimum, try again
-            if overlap.max().item() < min_overlap:
-                continue
+        # If not a single bounding box has a Jaccard overlap of greater than the minimum, try again
+        if overlap.max().item() < min_overlap:
+            continue
 
-            # Crop image
-            new_image = image[:, top:bottom, left:right]  # (3, new_h, new_w)
+        # Crop image
+        new_image = image[:, top:bottom, left:right]  # (3, new_h, new_w)
 
-            # Find centers of original bounding boxes
-            bb_centers = (boxes[:, :2] + boxes[:, 2:]) / 2.  # (n_objects, 2)
+        # Find centers of original bounding boxes
+        bb_centers = (boxes[:, :2] + boxes[:, 2:]) / 2.  # (n_objects, 2)
 
-            # Find bounding boxes whose centers are in the crop
-            centers_in_crop = (bb_centers[:, 0] > left) * (bb_centers[:, 0] < right) * (bb_centers[:, 1] > top) * (
-                    bb_centers[:, 1] < bottom)  # (n_objects), a Torch uInt8/Byte tensor, can be used as a boolean index
+        # Find bounding boxes whose centers are in the crop
+        centers_in_crop = (bb_centers[:, 0] > left) * (bb_centers[:, 0] < right) * (bb_centers[:, 1] > top) * (
+                bb_centers[:, 1] < bottom)  # (n_objects), a Torch uInt8/Byte tensor, can be used as a boolean index
 
-            # If not a single bounding box has its center in the crop, try again
-            if not centers_in_crop.any():
-                continue
+        # If not a single bounding box has its center in the crop, try again
+        if not centers_in_crop.any():
+            continue
 
-            # Discard bounding boxes that don't meet this criterion
-            new_boxes = boxes[centers_in_crop, :]
-            new_labels = labels[centers_in_crop]
+        # Discard bounding boxes that don't meet this criterion
+        new_boxes = boxes[centers_in_crop, :]
+        new_labels = labels[centers_in_crop]
 
-            # Calculate bounding boxes' new coordinates in the crop
-            new_boxes[:, :2] = torch.max(new_boxes[:, :2], crop[:2])  # crop[:2] is [left, top]
-            new_boxes[:, :2] -= crop[:2]
-            new_boxes[:, 2:] = torch.min(new_boxes[:, 2:], crop[2:])  # crop[2:] is [right, bottom]
-            new_boxes[:, 2:] -= crop[:2]
+        # Calculate bounding boxes' new coordinates in the crop
+        new_boxes[:, :2] = torch.max(new_boxes[:, :2], crop[:2])  # crop[:2] is [left, top]
+        new_boxes[:, :2] -= crop[:2]
+        new_boxes[:, 2:] = torch.min(new_boxes[:, 2:], crop[2:])  # crop[2:] is [right, bottom]
+        new_boxes[:, 2:] -= crop[:2]
 
-            return new_image, new_boxes, new_labels
+        return new_image, new_boxes, new_labels
+
+    return image, boxes, labels
 
 
 def flip(image, boxes):
@@ -783,7 +782,7 @@ def transform(image, box, label, split):
     # mean = [0.485, 0.456, 0.406]
     # std = [0.229, 0.224, 0.225]
 
-    # MaskDataset train set mean and std TODO YOTAM: changed to this one
+    # MaskDataset train set mean and std
     mean = [0.1723, 0.1535, 0.3206]
     std = [1.1535, 1.1641, 1.1382]
 
@@ -793,7 +792,8 @@ def transform(image, box, label, split):
 
     if split == 'TRAIN':
         # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
-        new_image = photometric_distort(new_image)
+        if random.random() < 0.5:
+            new_image = photometric_distort(new_image)
 
         # Convert PIL image to Torch tensor
         new_image = FT.to_tensor(new_image)
@@ -819,7 +819,7 @@ def transform(image, box, label, split):
     # Convert PIL image to Torch tensor
     new_image = FT.to_tensor(new_image)
 
-    # Normalize by mean and standard deviation of ImageNet data that our base VGG was trained on
+    # Normalize by mean and standard deviation
     new_image = FT.normalize(new_image, mean=mean, std=std)
 
     return new_image, new_box, new_label

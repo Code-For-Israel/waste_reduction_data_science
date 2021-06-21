@@ -24,18 +24,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
 batch_size = 24  # batch size
-workers = 4  # number of workers for loading data in the DataLoader
+workers = 6  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-min_score = 0.01
-topk = 200
-lr = 1e-2  # learning rate TODO original 1e-3
-# momentum = 0.9  # momentum TODO
+lr = 2e-3  # learning rate TODO original 1e-3
+# momentum = 0.9  # momentum TODO uncomment if using SGD
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
-grad_clip = None  # TODO
+grad_clip = None  # TODO original was None
 
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 checkpoint = ''  # '/home/student/checkpoint_nvidia_ssd300_epoch=7.pth.tar'
 if checkpoint:
@@ -55,8 +53,6 @@ def main():
     if checkpoint:
         checkpoint = torch.load(checkpoint)
         model.load_state_dict(checkpoint['state_dict'])
-    print(f"min_score = {min_score}")
-    print(f"top_k = {topk}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
     biases = list()
     not_biases = list()
@@ -70,6 +66,7 @@ def main():
                                  lr=lr, weight_decay=weight_decay)  # TODO SGD with momentum=momentum \ Adam
 
     boxes = create_boxes()
+    encoder = Encoder(boxes)
     criterion = Loss(boxes).to(device)
 
     # Custom dataloaders
@@ -84,8 +81,10 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 100  # TODO change
+    epochs = 500  # TODO change
+    print(dict(epochs=epochs, batch_size=batch_size, workers=workers, lr=lr, weight_decay=weight_decay))
 
+    # Store train losses
     train_losses = []
 
     # Epochs
@@ -106,7 +105,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # TODO Add the new evaluate() function here
+        # evaluate()  # TODO Add the new evaluate() function here
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -132,7 +131,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = boxes.to(device)
+        boxes = boxes.clamp(1e-20, 1 - 1e-20).to(device)  # to avoid boxes that augmented to be outside [0, 1] range
         labels = labels.to(device)
 
         # predicted
@@ -163,7 +162,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if (i % print_freq == 0 or i == len(train_loader) - 1) & i != 0:
+        if (i % print_freq == 0 or i == len(train_loader) - 1) and i != 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
