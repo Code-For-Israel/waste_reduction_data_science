@@ -772,6 +772,10 @@ def photometric_distort(image):
 
 
 def transform(image, box, label, split):
+    """
+    transform sample with augmentations if in train phase and for test phase only resize and normalize
+    input is copy of original data
+    """
     assert split in {'TRAIN', 'TEST'}
 
     # Mean and standard deviation of ImageNet data that our base VGG from torchvision was trained on
@@ -786,6 +790,28 @@ def transform(image, box, label, split):
     new_image = image
     new_box = box
     new_label = label
+
+    if split == 'TRAIN':
+        # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+        new_image = photometric_distort(new_image)
+
+        # Convert PIL image to Torch tensor
+        new_image = FT.to_tensor(new_image)
+
+        # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
+        # Fill surrounding space with the mean of our data that our base VGG was trained on
+        if random.random() < 0.5:
+            new_image, new_box = expand(new_image, new_box, filler=mean)
+
+        # Randomly crop image (zoom in)
+        new_image, new_box, new_label = random_crop(new_image, new_box, new_label)
+
+        # Convert Torch tensor to PIL image
+        new_image = FT.to_pil_image(new_image)
+
+        # Flip image with a 50% chance
+        if random.random() < 0.5:
+            new_image, new_box = flip(new_image, new_box)
 
     # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
     new_image, new_box = resize(new_image, new_box, dims=(300, 300))

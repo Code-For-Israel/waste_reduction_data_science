@@ -7,6 +7,7 @@ from dataset import MasksDataset
 from utils import *
 from eval import evaluate
 import constants
+import pickle
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -27,7 +28,7 @@ workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
 min_score = 0.01
 topk = 200
-lr = 1e-3  # learning rate TODO
+lr = 1e-2  # learning rate TODO original 1e-3
 # momentum = 0.9  # momentum TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
@@ -36,7 +37,7 @@ grad_clip = None  # TODO
 
 cudnn.benchmark = True
 
-checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
+checkpoint = ''  # '/home/student/checkpoint_nvidia_ssd300_epoch=7.pth.tar'
 if checkpoint:
     start_epoch = int(checkpoint.split('=')[-1].split('.')[0])
 else:
@@ -85,20 +86,27 @@ def main():
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = 100  # TODO change
 
+    train_losses = []
+
     # Epochs
     for epoch in range(start_epoch, epochs):
         # One epoch's training
-        train(train_loader=train_loader,
-              model=model,
-              criterion=criterion,
-              optimizer=optimizer,
-              epoch=epoch)
+        epoch_loss = train(train_loader=train_loader,
+                           model=model,
+                           criterion=criterion,
+                           optimizer=optimizer,
+                           epoch=epoch)
+        # Get the epoch loss and append to list
+        train_losses.append(epoch_loss)
+        # Save all the losses to pickled list
+        with open('/home/student/train_losses_list.pkl', 'wb') as f:
+            pickle.dump(train_losses, f)
 
         # Save checkpoint
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # TODO
+        # TODO Add the new evaluate() function here
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -135,6 +143,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         glabel = labels.expand(-1, 8732).to(device)  # Nx8732
 
         # loss
+        # add small constant to avoid 'inf' if one of bbox components is 0
         loss = criterion(ploc, plabel, gloc, glabel)
 
         # Backward prop.
@@ -154,7 +163,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if i % print_freq == 0 or i == len(train_loader) - 1:
+        if (i % print_freq == 0 or i == len(train_loader) - 1) & i != 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -162,6 +171,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
     del ploc, plabel, images, boxes, labels  # free some memory since their histories may be stored
+
+    return losses.avg
 
 
 # TODO

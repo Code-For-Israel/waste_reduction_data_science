@@ -68,7 +68,6 @@ class MasksDataset(Dataset):
 
         # Read image
         image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
-        image = image.convert('RGB')
 
         box = torch.FloatTensor(bbox)  # (1, 4)
         label = torch.LongTensor(proper_mask)  # (1)

@@ -29,7 +29,7 @@ topk = 200  # TODO modify before run
 
 # Load model checkpoint that is to be evaluated
 checkpoint = torch.load(checkpoint)
-model = SSD300(n_classes=n_classes)
+model = SSD300()
 model.load_state_dict(checkpoint['state_dict'])
 model = model.to(device)
 

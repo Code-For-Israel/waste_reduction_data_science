@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, resnet152
-from nvidia.utils import create_boxes
 
 
 class ResNet(nn.Module):
@@ -181,4 +180,5 @@ class Loss(nn.Module):
         num_mask = (pos_num > 0).float()
         pos_num = pos_num.float().clamp(min=1e-6)
         ret = (total_loss * num_mask / pos_num).mean(dim=0)
+
         return ret
