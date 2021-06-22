@@ -12,4 +12,3 @@ output = '/home/yotam/facemask_obj_detect/test.tar'
 gdown.download(url, output, quiet=False)
 tf = tarfile.open(output)
 tf.extractall('/home/yotam/facemask_obj_detect/')
-
