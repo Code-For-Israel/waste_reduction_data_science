@@ -2,6 +2,7 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
+import torch.nn as nn
 from model import SSD300, Loss
 from dataset import MasksDataset
 from utils import *
@@ -26,8 +27,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 24  # batch size
 workers = 6  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 2e-3  # learning rate TODO original 1e-3
-# momentum = 0.9  # momentum TODO uncomment if using SGD
+lr = 1e-3  # learning rate TODO original 1e-3
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -63,7 +63,7 @@ def main():
             else:
                 not_biases.append(param)
     optimizer = torch.optim.Adam(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                 lr=lr, weight_decay=weight_decay)  # TODO SGD with momentum=momentum \ Adam
+                                 lr=lr)  # , weight_decay=weight_decay)  # TODO PReLU so no weight_decay
 
     boxes = create_boxes()
     encoder = Encoder(boxes)
@@ -97,12 +97,12 @@ def main():
                            epoch=epoch)
         # Get the epoch loss and append to list
         train_losses.append(epoch_loss)
-        # Save all the losses to pickled list
-        with open('/home/student/train_losses_list.pkl', 'wb') as f:
-            pickle.dump(train_losses, f)
+        # Save all the losses to pickled list TODO
+        # with open('/home/student/train_losses_list.pkl', 'wb') as f:
+        #     pickle.dump(train_losses, f)
 
-        # Save checkpoint
-        save_checkpoint(epoch, model)
+        # Save checkpoint TODO
+        # save_checkpoint(epoch, model)
 
         # Evaluate test set
         # evaluate()  # TODO Add the new evaluate() function here
@@ -152,6 +152,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # Clip gradients, if necessary
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
+
+        # Exploding gradients: # TODO
+        # nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.25, norm_type=2)
+
+        # Print gradients norms TODO
+        # for name, param in model.named_parameters():
+        #     if name.startswith('loc') or name.startswith('conf'):
+        #         print(f'{name}, {param.grad.norm()}')
 
         # Update model
         optimizer.step()

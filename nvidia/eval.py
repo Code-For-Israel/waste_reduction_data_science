@@ -7,6 +7,7 @@ import os
 import json
 import utils as utils
 
+
 def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
     """
     Evaluate.
@@ -68,8 +69,6 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
             # fair comparison with the paper's results and other repos
             # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
 
-
-
             # Store this batch's results for accuracy, IoU calculation
             boxes = [b.to(device) for b in boxes]
             labels = [l.to(device) for l in labels]
@@ -129,7 +128,6 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
             results.to_csv(save_csv, index=False, header=True)
             print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
         return mean_accuracy, mean_iou
-
 
 #############
 

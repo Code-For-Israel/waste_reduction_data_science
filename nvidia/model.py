@@ -65,19 +65,27 @@ class SSD300(nn.Module):
                 layer = nn.Sequential(
                     nn.Conv2d(input_size, channels, kernel_size=1, bias=False),
                     nn.BatchNorm2d(channels),
-                    nn.ReLU(inplace=True),
+                    # nn.LeakyReLU(negative_slope=0.1, inplace=True),  # TODO LeakyReLU / ReLU / PReLU
+                    # nn.ReLU(inplace=True),
+                    nn.PReLU(channels),
                     nn.Conv2d(channels, output_size, kernel_size=3, padding=1, stride=2, bias=False),
                     nn.BatchNorm2d(output_size),
-                    nn.ReLU(inplace=True),
+                    # nn.LeakyReLU(negative_slope=0.1, inplace=True),  # TODO LeakyReLU / ReLU / PReLU
+                    # nn.ReLU(inplace=True),
+                    nn.PReLU(output_size),
                 )
             else:
                 layer = nn.Sequential(
                     nn.Conv2d(input_size, channels, kernel_size=1, bias=False),
                     nn.BatchNorm2d(channels),
-                    nn.ReLU(inplace=True),
+                    # nn.LeakyReLU(negative_slope=0.1, inplace=True),  # TODO LeakyReLU / ReLU / PReLU
+                    # nn.ReLU(inplace=True),
+                    nn.PReLU(channels),
                     nn.Conv2d(channels, output_size, kernel_size=3, bias=False),
                     nn.BatchNorm2d(output_size),
-                    nn.ReLU(inplace=True),
+                    # nn.LeakyReLU(negative_slope=0.1, inplace=True),  # TODO LeakyReLU / ReLU / PReLU
+                    # nn.ReLU(inplace=True),
+                    nn.PReLU(output_size),
                 )
 
             self.additional_blocks.append(layer)
@@ -89,7 +97,7 @@ class SSD300(nn.Module):
         for layer in layers:
             for param in layer.parameters():
                 if param.dim() > 1:
-                    nn.init.xavier_uniform_(param)
+                    nn.init.kaiming_uniform_(param)  # TODO original is xavier_uniform_
 
     # Shape the classifier to the view of bboxes
     def bbox_view(self, src, loc, conf):
@@ -181,5 +189,6 @@ class Loss(nn.Module):
         num_mask = (pos_num > 0).float()
         pos_num = pos_num.float().clamp(min=1e-6)
         ret = (total_loss * num_mask / pos_num).mean(dim=0)
-
+        # print('sl1', (sl1.detach() * num_mask / pos_num).mean(dim=0),
+        #       ' ----- closs', (closs.detach() * num_mask / pos_num).mean(dim=0))  # TODO print
         return ret
