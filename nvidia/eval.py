@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import os
 import json
-import utils as utils
+import nvidia.utils as utils
 
-def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
+def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, verbose=False):
     """
     Evaluate.
 
@@ -55,11 +55,15 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
                 ploc_i = ploc[idx, :, :].unsqueeze(0)
                 plabel_i = plabel[idx, :, :].unsqueeze(0)
 
+                ploc_i = ploc_i.permute(0, 2, 1)  # [1, 8732, 4] -> [1, 4, 8732]
+                plabel_i = plabel_i.permute(0, 2, 1)  # [1, 8732, 3] -> [1, 3, 8732]
                 try:
-                    result = utils.Encoder.decode_batch(ploc_i, plabel_i, 0.50, 200)[0]
+                    result = encoder.decode_batch(ploc_i, plabel_i, criteria=0.50, max_output=200)[0]
                     # result is list of (bboxes_out, labels_out, scores_out)s
+                    det_boxes.append(result[0])
+                    det_labels.append(result[1])
+                    det_scores.append(result[2])
                 except:
-                    # raise
                     print("")
                     print("No object detected in idx: {}".format(idx))
                     continue
@@ -71,16 +75,11 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
 
 
             # Store this batch's results for accuracy, IoU calculation
-            boxes = [b.to(device) for b in boxes]
-            labels = [l.to(device) for l in labels]
+            boxes = [b.to(device) for b in boxes]  # list of torch.Size([1, 4])
+            labels = [l.to(device) for l in labels]  # list of torch.Size([1])
 
-            for i in result:
-                det_boxes.extend(i[0])
-                det_labels.extend(i[1])
-                det_scores.extend(i[2])
-
-            true_boxes.extend(boxes)
-            true_labels.extend(labels)
+            true_boxes.append(boxes)
+            true_labels.append(labels)
 
         # htot, wtot = img_size[0][idx].item(), img_size[1][idx].item()
         # loc, label, prob = [r.cpu().numpy() for r in result]
@@ -112,12 +111,13 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
-        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels)]
+        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels[0])]
         mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
 
         mean_iou = np.mean([utils.calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
                             for true_box, pred_box in zip(true_boxes, predicted_boxes)])
 
+        predicted_boxes = [torch.stack(pred_box).cpu().numpy() for pred_box in predicted_boxes]
         if verbose:
             print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
 

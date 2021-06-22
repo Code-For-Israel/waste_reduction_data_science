@@ -143,7 +143,7 @@ class Encoder(object):
     """
 
     def __init__(self, dboxes):
-        self.dboxes = dboxes(order="ltrb")
+        self.dboxes = dboxes(order="ltrb") # call function
         self.dboxes_xywh = dboxes(order="xywh").unsqueeze(dim=0)
         self.nboxes = self.dboxes.size(0)
         self.scale_xy = dboxes.scale_xy
@@ -196,7 +196,7 @@ class Encoder(object):
         bboxes_in[:, :, :2] = self.scale_xy * bboxes_in[:, :, :2]
         bboxes_in[:, :, 2:] = self.scale_wh * bboxes_in[:, :, 2:]
 
-        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :, :2]
+        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :, :2]  # TODO this one
         bboxes_in[:, :, 2:] = bboxes_in[:, :, 2:].exp() * self.dboxes_xywh[:, :, 2:]
 
         # Transform format to ltrb
@@ -220,7 +220,7 @@ class Encoder(object):
             bbox = bbox.squeeze(0)
             prob = prob.squeeze(0)
             output.append(self.decode_single(bbox, prob, criteria, max_output))
-        return output
+        return output  # list [(tensor([-0.0284,  0.0026,  0.0555,  0.0678], device='cuda:0'), tensor(2), tensor(0.8412, device='cuda:0'))]
 
     # perform non-maximum suppression
     def decode_single(self, bboxes_in, scores_in, criteria, max_output, max_num=200):
@@ -275,16 +275,14 @@ class Encoder(object):
         bboxes_out = bboxes_out[max_ids, :]
         labels_out = labels_out[max_ids]
         scores_out = scores_out[max_ids]
-
         # TODO need to check this works
         _, most_left_ids = bboxes_out.sort(dim=0)
         most_left_ids = most_left_ids[0][0]
 
-        # # take the most left Bounding Box that passed the last filters
-        # most_left_index = int(torch.sort(image_boxes, dim=0, descending=False)[1][0][0])
-        # bboxes_out = bboxes_out[most_left_index]  # most left
-        # scores_out = scores_out[most_left_index]
-        # labels_out = labels_out[most_left_index]
+        # take the most left Bounding Box that passed the last filters
+        bboxes_out = bboxes_out[most_left_ids]
+        scores_out = scores_out[most_left_ids]
+        labels_out = labels_out[most_left_ids]
 
         return bboxes_out, labels_out, scores_out
 
