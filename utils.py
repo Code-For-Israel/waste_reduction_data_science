@@ -483,8 +483,8 @@ def transform(image, box, label, split):
     # std = [0.229, 0.224, 0.225]
 
     # MaskDataset train set mean and std TODO YOTAM: changed to this one
-    mean = [0.1723, 0.1535, 0.3206]
-    std = [1.1535, 1.1641, 1.1382]
+    mean = [0.5244, 0.4904, 0.4781]
+    std = [0.2642, 0.2608, 0.2561]
 
     new_image = image
     new_box = box

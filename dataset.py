@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import json
 import os
 from PIL import Image
-from utils import transform
+from utils import *
 import constants
 import concurrent.futures
 
@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = os.listdir(data_folder)[:20] # TODO
+        self.images = os.listdir(data_folder)
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             paths_to_exclude = []
@@ -47,15 +47,20 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
-        sample = self.loaded_imgs[i]
-        # TODO YOTAM if split == TRAIN make transformations (crop, flip ...)
-
         if self.split == 'TRAIN':
-            img = sample[1]
-            # TODO Augmentation on img - make a copy first (!!!!!!)
-            return img, sample[2], sample[3]
-        else:  # TEST
-            return sample[1], sample[2], sample[3]  # image, box, label
+            # get sample from saved object
+            image_id, image, box, label = self.loaded_imgs[i]  # str, PIL.image, tensor, tensor
+
+            # copy sample to avoid making changes to original data
+            new_image, new_box, new_label = image.copy(), box.clone(), label.clone()
+
+            # Apply transformations
+            new_image, new_box, new_label = transform(new_image, new_box, new_label, split=self.split)
+            return new_image, new_box, new_label
+        else:
+            # get sample from saved object
+            image_id, image, box, label = self.loaded_imgs[i]  # str, tensor, tensor, tensor
+            return image, box, label
 
     def __len__(self):
         return len(self.images)
@@ -64,33 +69,66 @@ class MasksDataset(Dataset):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
+        bbox = [number if number != 0 else 1e-20 for number in bbox]  # to avoid inf in smooth_l1 in loss function
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
         # Read image
         image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
 
-        box = torch.FloatTensor(bbox)  # (1, 4)
+        box = torch.FloatTensor([bbox])  # (1, 4)
         label = torch.LongTensor(proper_mask)  # (1)
 
-        # Apply transformations
-        image, box, label = transform(image, box, label, split=self.split)
+        if self.split == 'TRAIN':
+            return image_id, image, box, label  # str, PIL.image, tensor, tensor
+        else:
+            mean = [0.5244, 0.4904, 0.4781]
+            std = [0.2642, 0.2608, 0.2561]
 
-        return image_id, image, box, label
+            # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
+            new_image, new_box = resize(image, box, dims=(300, 300))
+
+            # Convert PIL image to Torch tensor
+            new_image = FT.to_tensor(new_image)
+
+            # Normalize by mean and standard deviation of ImageNet data that our base VGG was trained on
+            new_image = FT.normalize(new_image, mean=mean, std=std)
+            return image_id, new_image, new_box, label
 
 
-if __name__ == '__main__':
-    # check MasksDataset class
-    # total of ~22GB RAM are needed
-    # train
-    dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True)
-    # (images, boxes, labels) = next(iter(train_loader))
+def calculate_mean_std(path_to_images, size=300):
+    """
+    Calculate the mean ans std of image dataset
+    :param path_to_images: (str) path to images folder
+    """
+    from torch.utils.data import Dataset
+    from torch.utils.data import DataLoader
+    from torchvision import transforms
+    from PIL import Image
+    import os
+
+    class CustomDataSet(Dataset):
+        def __init__(self, main_dir, transform):
+            self.main_dir = main_dir
+            self.transform = transform
+            self.all_imgs = os.listdir(main_dir)
+
+        def __len__(self):
+            return len(self.all_imgs)
+
+        def __getitem__(self, idx):
+            img_loc = os.path.join(self.main_dir, self.all_imgs[idx])
+            image = Image.open(img_loc).convert("RGB")
+            tensor_image = self.transform(image)
+            return tensor_image
+
+    dataset = CustomDataSet(path_to_images, transforms.Compose([transforms.Resize(size), transforms.ToTensor()]))
+
+    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
 
     mean = 0.
     std = 0.
     nb_samples = 0.
-    for i, (images, boxes, labels) in enumerate(train_loader):
-        data = images
+    for data in loader:
         batch_samples = data.size(0)
         data = data.view(batch_samples, data.size(1), -1)
         mean += data.mean(2).sum(0)
@@ -99,10 +137,18 @@ if __name__ == '__main__':
 
     mean /= nb_samples
     std /= nb_samples
-
     print('train pixel mean values', mean)
     print('train pixel std values', std)
 
+
+if __name__ == '__main__':
+    # check MasksDataset class
+    # total of ~22GB RAM are needed
+    # train
+    dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=True)
+    (images, boxes, labels) = next(iter(train_loader))
+
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=False)
