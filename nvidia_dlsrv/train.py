@@ -29,10 +29,10 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 32  # batch size # TODO the original was 8
+batch_size = 26  # batch size # TODO the original was 8
 workers = 6  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 5 * 1e-3  # learning rate TODO original 1e-3  >> maybe make it bigger?
+lr = 4 * 1e-3  # learning rate TODO original 1e-3  >> maybe make it bigger?
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
