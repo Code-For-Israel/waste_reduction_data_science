@@ -1,7 +1,7 @@
-import os
-
-os.system("export CUDA_DEVICE_ORDER=PCI_BUS_ID")
-os.system("export CUDA_VISIBLE_DEVICES=2")
+# import os
+#
+# os.system("export CUDA_DEVICE_ORDER=PCI_BUS_ID")
+# os.system("export CUDA_VISIBLE_DEVICES=2")
 
 import time
 import torch.backends.cudnn as cudnn
