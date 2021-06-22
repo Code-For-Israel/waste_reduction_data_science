@@ -103,7 +103,7 @@ def main():
         # Get the epoch loss and append to list
         train_losses.append(epoch_loss)
         # Save all the losses to pickled list
-        with open('/mnt/ml-srv1/home/yotam/facemask_obj_detect/train_losses_list.pkl', 'wb') as f:
+        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/train_losses_list.pkl', 'wb') as f:
             pickle.dump(train_losses, f)
 
         # Save checkpoint
