@@ -81,8 +81,8 @@ class MasksDataset(Dataset):
         if self.split == 'TRAIN':
             return image_id, image, box, label  # str, PIL.image, tensor, tensor
         else:
-            mean = [0.1723, 0.1535, 0.3206]
-            std = [1.1535, 1.1641, 1.1382]
+            mean = [0.5244, 0.4904, 0.4781]
+            std = [0.2642, 0.2608, 0.2561]
 
             # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
             new_image, new_box = resize(image, box, dims=(300, 300))
@@ -95,26 +95,53 @@ class MasksDataset(Dataset):
             return image_id, new_image, new_box, label
 
 
+def calculate_mean_std(path_to_images, size=300):
+    """
+    Calculate the mean ans std of image dataset
+    :param path_to_images: (str) path to images folder
+    """
+    from torch.utils.data import Dataset
+    from torch.utils.data import DataLoader
+    from torchvision import transforms
+    from PIL import Image
+    import os
+
+    class CustomDataSet(Dataset):
+        def __init__(self, main_dir, transform):
+            self.main_dir = main_dir
+            self.transform = transform
+            self.all_imgs = os.listdir(main_dir)
+
+        def __len__(self):
+            return len(self.all_imgs)
+
+        def __getitem__(self, idx):
+            img_loc = os.path.join(self.main_dir, self.all_imgs[idx])
+            image = Image.open(img_loc).convert("RGB")
+            tensor_image = self.transform(image)
+            return tensor_image
+
+    dataset = CustomDataSet(path_to_images, transforms.Compose([transforms.Resize(size), transforms.ToTensor()]))
+
+    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
+
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+    for data in loader:
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
+    print('train pixel mean values', mean)
+    print('train pixel std values', std)
+
+
 if __name__ == '__main__':
-    def calculate_mean_std(train_loader):
-        mean = 0.
-        std = 0.
-        nb_samples = 0.
-        for i, (images, boxes, labels) in enumerate(train_loader):
-            data = images
-            batch_samples = data.size(0)
-            data = data.view(batch_samples, data.size(1), -1)
-            mean += data.mean(2).sum(0)
-            std += data.std(2).sum(0)
-            nb_samples += batch_samples
-
-        mean /= nb_samples
-        std /= nb_samples
-
-        print('train pixel mean values', mean)
-        print('train pixel std values', std)
-
-
     # check MasksDataset class
     # total of ~22GB RAM are needed
     # train
