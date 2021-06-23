@@ -95,7 +95,7 @@ def main():
 
         # Evaluate test set
         # TODO change back to test_loader , uncomment
-        if not i % 100:
+        if not epoch % 100:
             evaluate(train_loader, model, verbose=True)
 
 
