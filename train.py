@@ -94,7 +94,7 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # TODO back to test_loader
+        # TODO change back to test_loader , uncomment
         evaluate(train_loader, model, verbose=True)
 
 
