@@ -147,7 +147,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if (i % print_freq == 0 or i == len(train_loader) - 1) and i != 0:
+        if (i % print_freq == 0 or i == len(train_loader) - 1):
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
