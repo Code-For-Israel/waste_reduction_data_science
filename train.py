@@ -95,7 +95,8 @@ def main():
 
         # Evaluate test set
         # TODO change back to test_loader , uncomment
-        evaluate(train_loader, model, verbose=True)
+        if not i % 100:
+            evaluate(train_loader, model, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
