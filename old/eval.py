@@ -3,10 +3,9 @@ from tqdm import tqdm
 import torch.utils.data
 import numpy as np
 import pandas as pd
-import json
-import os
 
-def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=False):
+
+def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
     """
     Evaluate.
 
@@ -27,11 +26,10 @@ def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=Fa
     det_boxes = list()
     det_labels = list()
     det_scores = list()
-    true_labels = list()
 
     with torch.no_grad():
         # Batches
-        for i, (images, _, labels) in enumerate(tqdm(loader, desc='Evaluating')):
+        for i, (images, boxes, labels) in enumerate(tqdm(loader, desc='Evaluating')):
             images = images.to(device)  # (N, 3, 300, 300)
 
             # Forward prop.
@@ -47,12 +45,9 @@ def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=Fa
             # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
 
             # Store this batch's results for accuracy, IoU calculation
-            labels = [l.to(device) for l in labels]
-
             det_boxes.extend(det_boxes_batch)
             det_labels.extend(det_labels_batch)
             det_scores.extend(det_scores_batch)
-            true_labels.extend(labels)
 
         filenames = loader.dataset.images
         imgs_orig_sizes = loader.dataset.sizes
@@ -70,7 +65,7 @@ def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=Fa
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
-        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels)]
+        true_labels = [filename.strip(".jpg").split("__")[2] for filename in filenames]
         mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
 
         mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())

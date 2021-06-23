@@ -2,13 +2,11 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-import torch.nn as nn
-from model import SSD300, Loss
+from model import SSD300, MultiBoxLoss
 from dataset import MasksDataset
 from utils import *
 from eval import evaluate
 import constants
-import pickle
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -24,18 +22,21 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 40  # batch size # TODO the original was 8
-workers = 6  # number of workers for loading data in the DataLoader
+batch_size = 40  # batch size
+workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 6 * 1e-3  # learning rate TODO original 1e-3  >> maybe make it bigger?
+min_score = 0.01
+topk = 200
+lr = 5e-3  # learning rate TODO
+# momentum = 0.9  # momentum TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
-grad_clip = None  # TODO original was None
+grad_clip = None
 
-# cudnn.benchmark = True
+cudnn.benchmark = True
 
-checkpoint = ''  # '/home/student/checkpoint_nvidia_ssd300_epoch=7.pth.tar'
+checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
 if checkpoint:
     start_epoch = int(checkpoint.split('=')[-1].split('.')[0])
 else:
@@ -49,10 +50,12 @@ def main():
     global label_map, epoch, decay_lr_at, checkpoint
 
     # Initialize model
-    model = SSD300().to(device)
+    model = SSD300(n_classes=n_classes)
     if checkpoint:
         checkpoint = torch.load(checkpoint)
         model.load_state_dict(checkpoint['state_dict'])
+    print(f"min_score = {min_score}")
+    print(f"top_k = {topk}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
     biases = list()
     not_biases = list()
@@ -63,11 +66,11 @@ def main():
             else:
                 not_biases.append(param)
     optimizer = torch.optim.Adam(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                 lr=lr)  # , weight_decay=weight_decay)  # TODO PReLU so no weight_decay
+                                 lr=lr, weight_decay=weight_decay)
 
-    boxes = create_boxes()
-    encoder = Encoder(boxes)
-    criterion = Loss(boxes).to(device)
+    # Move to default device
+    model = model.to(device)
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=10.).to(device)  # TODO original alpha is 1.
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
@@ -75,37 +78,30 @@ def main():
                                                num_workers=workers, pin_memory=True)
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                                              num_workers=workers, pin_memory=True)
+                                              num_workers=1, pin_memory=True)
 
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = 500  # TODO change
-    print(dict(epochs=epochs, batch_size=batch_size, workers=workers, lr=lr, weight_decay=weight_decay))
-
-    # Store train losses
-    train_losses = []
 
     # Epochs
     for epoch in range(start_epoch, epochs):
         # One epoch's training
-        epoch_loss = train(train_loader=train_loader,
-                           model=model,
-                           criterion=criterion,
-                           optimizer=optimizer,
-                           epoch=epoch)
-        # Get the epoch loss and append to list
-        train_losses.append(epoch_loss)
-        # Save all the losses to pickled list
-        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/train_losses_list.pkl', 'wb') as f:
-            pickle.dump(train_losses, f)
+        train(train_loader=train_loader,
+              model=model,
+              criterion=criterion,
+              optimizer=optimizer,
+              epoch=epoch)
 
         # Save checkpoint
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # evaluate()  # TODO Add the new evaluate() function here
+        # TODO change to test_loader, Remove if
+        # if not epoch % 40 and epoch != 0:
+        #     evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -131,19 +127,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = boxes.clamp(1e-8, 1 - 1e-8).to(device)  # to avoid boxes that augmented to be outside [0, 1] range
-        labels = labels.to(device)
+        boxes = [b.to(device) for b in boxes]
+        labels = [l.to(device) for l in labels]
 
-        # predicted
-        ploc, plabel = model(images)  # ploc, plabel: Nx4x8732, Nxlabel_numx8732
+        # Forward prop.
+        predicted_locs, predicted_scores = model(images)  # (N, 8732, 4), (N, 8732, n_classes=3)
 
-        # ground truth
-        gloc = boxes.expand(-1, 8732, 4).reshape(-1, 4, 8732).to(device)  # Nx4x8732
-        glabel = labels.expand(-1, 8732).to(device)  # Nx8732
-
-        # loss
-        # add small constant to avoid 'inf' if one of bbox components is 0
-        loss = criterion(ploc, plabel, gloc, glabel)
+        # Loss
+        loss = criterion(predicted_locs, predicted_scores, boxes, labels)  # scalar
 
         # Backward prop.
         optimizer.zero_grad()
@@ -152,14 +143,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # Clip gradients, if necessary
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
-
-        # Exploding gradients: # TODO
-        # nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.25, norm_type=2)
-
-        # Print gradients norms TODO
-        # for name, param in model.named_parameters():
-        #     if name.startswith('loc') or name.startswith('conf'):
-        #         print(f'{name}, {param.grad.norm()}')
 
         # Update model
         optimizer.step()
@@ -177,9 +160,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader),
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
-    del ploc, plabel, images, boxes, labels  # free some memory since their histories may be stored
-
-    return losses.avg
+    del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
 
 
 # TODO

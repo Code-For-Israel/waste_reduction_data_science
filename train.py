@@ -22,10 +22,10 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 40  # batch size
-workers = 6  # number of workers for loading data in the DataLoader
+batch_size = 20  # batch size TODO YOTAM
+workers = 1  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-lr = 5e-3  # learning rate TODO
+lr = 2e-3  # learning rate TODO YOTAM
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -65,15 +65,15 @@ def main():
 
     # Move to default device
     model = model.to(device)
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=1.).to(device)  # TODO original alpha is 1.
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=1.).to(device)  # TODO original alpha=1.
 
     # Custom dataloaders
-    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')  # TODO change to train
+    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers, pin_memory=True)
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                                              num_workers=workers, pin_memory=True)
+                                              num_workers=workers, pin_memory=False)
 
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
@@ -95,8 +95,8 @@ def main():
 
         # Evaluate test set
         # TODO change back to test_loader , uncomment
-        if not epoch % 100:
-            evaluate(train_loader, model, verbose=True)
+        # if not epoch % 100 and epoch != 0:
+        #     evaluate(train_loader, model, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -123,7 +123,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
         # to avoid boxes that augmented to be outside [0, 1] range
-        boxes = [b.to(device) for b in boxes.clamp(1e-20, 1 - 1e-20)]
+        boxes = [b.to(device) for b in boxes.clamp(1e-8, 1 - 1e-8)]
         labels = [l.to(device) for l in labels]
 
         # Forward prop.

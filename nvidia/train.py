@@ -131,7 +131,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = boxes.clamp(1e-20, 1 - 1e-20).to(device)  # to avoid boxes that augmented to be outside [0, 1] range
+        boxes = boxes.clamp(1e-8, 1 - 1e-8).to(device)  # to avoid boxes that augmented to be outside [0, 1] range
         labels = labels.to(device)
 
         # predicted

@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = sorted(os.listdir(data_folder))[:40]  # TODO YOTAM
+        self.images = sorted(os.listdir(data_folder))
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             paths_to_exclude = []
@@ -69,7 +69,7 @@ class MasksDataset(Dataset):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
-        bbox = [number if number != 0 else 1e-20 for number in bbox]  # to avoid inf in smooth_l1 in loss function
+        bbox = [number if number != 0 else 1e-8 for number in bbox]  # to avoid inf in smooth_l1 in loss function
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
         # Read image
