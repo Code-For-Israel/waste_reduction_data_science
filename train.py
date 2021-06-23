@@ -121,7 +121,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = [b.to(device) for b in boxes]
+        # to avoid boxes that augmented to be outside [0, 1] range
+        boxes = [b.to(device) for b in boxes.clamp(1e-20, 1 - 1e-20)]
         labels = [l.to(device) for l in labels]
 
         # Forward prop.
