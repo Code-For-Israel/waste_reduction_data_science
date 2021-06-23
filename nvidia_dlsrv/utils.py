@@ -264,6 +264,7 @@ class Encoder(object):
             labels_out.extend([i] * len(candidates))
 
         if not bboxes_out:
+            # TODO YOTAM: WE SHOULD CHANGE THIS
             return [torch.tensor([]) for _ in range(3)]
 
         bboxes_out, labels_out, scores_out = torch.cat(bboxes_out, dim=0), \
@@ -276,7 +277,7 @@ class Encoder(object):
         bboxes_out = bboxes_out[max_ids, :]
         labels_out = labels_out[max_ids]
         scores_out = scores_out[max_ids]
-        # TODO need to check this works
+
         _, most_left_ids = bboxes_out.sort(dim=0)
         most_left_ids = most_left_ids[0][0]
 

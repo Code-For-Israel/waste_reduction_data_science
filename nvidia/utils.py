@@ -196,8 +196,7 @@ class Encoder(object):
         bboxes_in[:, :, :2] = self.scale_xy * bboxes_in[:, :, :2]
         bboxes_in[:, :, 2:] = self.scale_wh * bboxes_in[:, :, 2:]
 
-        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :,
-                                                                                 :2]  # TODO this one
+        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :, :2]  # TODO this one
         bboxes_in[:, :, 2:] = bboxes_in[:, :, 2:].exp() * self.dboxes_xywh[:, :, 2:]
 
         # Transform format to ltrb

@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = os.listdir(data_folder)
+        self.images = sorted(os.listdir(data_folder))
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             paths_to_exclude = []
