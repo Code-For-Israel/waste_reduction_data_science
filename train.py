@@ -68,7 +68,7 @@ def main():
     criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=1.).to(device)  # TODO original alpha is 1.
 
     # Custom dataloaders
-    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')  # TODO change to train
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers, pin_memory=True)
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
