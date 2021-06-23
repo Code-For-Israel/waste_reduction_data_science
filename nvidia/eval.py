@@ -1,20 +1,18 @@
-# from utils import *
 from tqdm import tqdm
 import torch.utils.data
 import numpy as np
 import pandas as pd
 import os
 import json
-import nvidia.utils as utils
+import utils as utils
 
-def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, verbose=False):
+
+def evaluate(loader, model, encoder, save_csv=False, verbose=False):
     """
     Evaluate.
 
     :param loader: DataLoader for test data, created with shuffle=False
     :param model: model
-    :param min_score: minimum score for detect_objects()
-    :param topk: take k top boxes by scores per image
     :param save_csv: False or path to save file with predicted results
     :param verbose: whether to print IoU and accuracy or not
     return mean_accuracy, mean_iou for all the data in `loader`
@@ -39,13 +37,7 @@ def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, ver
             # Forward prop.
             predicted_locs, predicted_scores = model(images)
 
-            # Detect objects in SSD output
-            # det_boxes_batch, det_labels_batch, det_scores_batch = model.detect_objects(predicted_locs, predicted_scores,
-            #                                                                            min_score=min_score,
-            #                                                                            max_overlap=0.45,
-            #                                                                            top_k=topk)
-
-            # Get predictions # TODO from here new
+            # Get predictions
             ploc, plabel = predicted_locs.float(), predicted_scores.float()
 
             # Handle the batch of predictions produced
@@ -68,32 +60,12 @@ def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, ver
                     print("No object detected in idx: {}".format(idx))
                     continue
 
-            # Evaluation MUST be at min_score=0.01, max_overlap=0.45, top_k=200 for
-            # fair comparison with the paper's results and other repos
-            # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
-
-
-
             # Store this batch's results for accuracy, IoU calculation
             boxes = [b.to(device) for b in boxes]  # list of torch.Size([1, 4])
             labels = [l.to(device) for l in labels]  # list of torch.Size([1])
 
             true_boxes.append(boxes)
             true_labels.append(labels)
-
-        # htot, wtot = img_size[0][idx].item(), img_size[1][idx].item()
-        # loc, label, prob = [r.cpu().numpy() for r in result]
-        # for loc_, label_, prob_ in zip(loc, label, prob):
-        #     ret.append([img_id[idx], loc_[0] * wtot, \
-        #                 loc_[1] * htot,
-        #                 (loc_[2] - loc_[0]) * wtot,
-        #                 (loc_[3] - loc_[1]) * htot,
-        #                 prob_,
-        #                 inv_map[label_]])
-        #
-        # # Now we have all predictions from this rank, gather them all together
-        # # if necessary
-        # ret = np.array(ret).astype(np.float32)
 
         filenames = loader.dataset.images
         imgs_orig_sizes = loader.dataset.sizes
@@ -118,6 +90,7 @@ def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, ver
                             for true_box, pred_box in zip(true_boxes, predicted_boxes)])
 
         predicted_boxes = [torch.stack(pred_box).cpu().numpy() for pred_box in predicted_boxes]
+
         if verbose:
             print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
 
@@ -128,63 +101,5 @@ def evaluate_nvidia(loader, model, encoder, min_score, topk, save_csv=False, ver
             results.proper_mask = predicted_labels
             results.to_csv(save_csv, index=False, header=True)
             print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
+
         return mean_accuracy, mean_iou
-
-
-#############
-
-
-# def evaluate(model, coco, cocoGt, encoder, inv_map, args):
-#     ret = []
-#
-#     # for idx, image_id in enumerate(coco.img_keys):
-#     for nbatch, (img, img_id, img_size, _, _) in enumerate(coco):
-#         print("Parsing batch: {}/{}".format(nbatch, len(coco)), end='\r')
-#         with torch.no_grad():
-#             inp = img.cuda()
-#             if args.amp:
-#                 inp = inp.half()
-#
-#             # Get predictions
-#             ploc, plabel = model(inp)
-#             ploc, plabel = ploc.float(), plabel.float()
-#
-#             # Handle the batch of predictions produced
-#             # This is slow, but consistent with old implementation.
-#             for idx in range(ploc.shape[0]):
-#                 # ease-of-use for specific predictions
-#                 ploc_i = ploc[idx, :, :].unsqueeze(0)
-#                 plabel_i = plabel[idx, :, :].unsqueeze(0)
-#
-#                 try:
-#                     result = encoder.decode_batch(ploc_i, plabel_i, 0.50, 200)[0]
-#                 except:
-#                     # raise
-#                     print("")
-#                     print("No object detected in idx: {}".format(idx))
-#                     continue
-#
-#                 htot, wtot = img_size[0][idx].item(), img_size[1][idx].item()
-#                 loc, label, prob = [r.cpu().numpy() for r in result]
-#                 for loc_, label_, prob_ in zip(loc, label, prob):
-#                     ret.append([img_id[idx], loc_[0] * wtot, \
-#                                 loc_[1] * htot,
-#                                 (loc_[2] - loc_[0]) * wtot,
-#                                 (loc_[3] - loc_[1]) * htot,
-#                                 prob_,
-#                                 inv_map[label_]])
-#
-#     # Now we have all predictions from this rank, gather them all together
-#     # if necessary
-#     ret = np.array(ret).astype(np.float32)
-#
-#
-#     final_results = ret
-#
-#     cocoDt = cocoGt.loadRes(final_results)
-#
-#     # E = COCOeval(cocoGt, cocoDt, iouType='bbox')
-#     # E.evaluate()
-#     # E.accumulate()
-#     #
-#     return E.stats[0]  # Average Precision  (AP) @[ IoU=050:0.95 | area=   all | maxDets=100 ]

@@ -3,6 +3,7 @@ import torch.utils.data
 from dataset import MasksDataset
 from eval import evaluate
 from model import SSD300
+import utils
 
 # Parsing script arguments
 parser = argparse.ArgumentParser(description='Process input')
@@ -38,7 +39,10 @@ model.eval()
 dataset = MasksDataset(data_folder=args.input_folder, split='test')
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=False,
                                          num_workers=6, pin_memory=True)
+# Create boxes
+boxes = utils.create_boxes()
+encoder = utils.Encoder(boxes)
 
 # Evaluate model on given data
 print(f"Evaluating data from path {args.input_folder}")
-evaluate(dataloader, model, save_csv="prediction.csv", verbose=True)
+evaluate(dataloader, model, encoder, save_csv="prediction.csv", verbose=True)

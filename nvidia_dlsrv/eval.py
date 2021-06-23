@@ -1,4 +1,3 @@
-# from utils import *
 from tqdm import tqdm
 import torch.utils.data
 import numpy as np
@@ -8,14 +7,13 @@ import json
 import utils as utils
 
 
-def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
+def evaluate(loader, model, encoder, save_csv=False, verbose=False):
     """
     Evaluate.
 
     :param loader: DataLoader for test data, created with shuffle=False
     :param model: model
-    :param min_score: minimum score for detect_objects()
-    :param topk: take k top boxes by scores per image
+    :param encoder: encoder
     :param save_csv: False or path to save file with predicted results
     :param verbose: whether to print IoU and accuracy or not
     return mean_accuracy, mean_iou for all the data in `loader`
@@ -40,13 +38,7 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
             # Forward prop.
             predicted_locs, predicted_scores = model(images)
 
-            # Detect objects in SSD output
-            # det_boxes_batch, det_labels_batch, det_scores_batch = model.detect_objects(predicted_locs, predicted_scores,
-            #                                                                            min_score=min_score,
-            #                                                                            max_overlap=0.45,
-            #                                                                            top_k=topk)
-
-            # Get predictions # TODO from here new
+            # Get predictions
             ploc, plabel = predicted_locs.float(), predicted_scores.float()
 
             # Handle the batch of predictions produced
@@ -56,44 +48,25 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
                 ploc_i = ploc[idx, :, :].unsqueeze(0)
                 plabel_i = plabel[idx, :, :].unsqueeze(0)
 
+                ploc_i = ploc_i.permute(0, 2, 1)  # [1, 8732, 4] -> [1, 4, 8732]
+                plabel_i = plabel_i.permute(0, 2, 1)  # [1, 8732, 3] -> [1, 3, 8732]
                 try:
-                    result = utils.Encoder.decode_batch(ploc_i, plabel_i, 0.50, 200)[0]
+                    result = encoder.decode_batch(ploc_i, plabel_i, criteria=0.50, max_output=200)[0]
                     # result is list of (bboxes_out, labels_out, scores_out)s
+                    det_boxes.append(result[0])
+                    det_labels.append(result[1])
+                    det_scores.append(result[2])
                 except:
-                    # raise
                     print("")
                     print("No object detected in idx: {}".format(idx))
                     continue
 
-            # Evaluation MUST be at min_score=0.01, max_overlap=0.45, top_k=200 for
-            # fair comparison with the paper's results and other repos
-            # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
-
             # Store this batch's results for accuracy, IoU calculation
-            boxes = [b.to(device) for b in boxes]
-            labels = [l.to(device) for l in labels]
+            boxes = [b.to(device) for b in boxes]  # list of torch.Size([1, 4])
+            labels = [l.to(device) for l in labels]  # list of torch.Size([1])
 
-            for i in result:
-                det_boxes.extend(i[0])
-                det_labels.extend(i[1])
-                det_scores.extend(i[2])
-
-            true_boxes.extend(boxes)
-            true_labels.extend(labels)
-
-        # htot, wtot = img_size[0][idx].item(), img_size[1][idx].item()
-        # loc, label, prob = [r.cpu().numpy() for r in result]
-        # for loc_, label_, prob_ in zip(loc, label, prob):
-        #     ret.append([img_id[idx], loc_[0] * wtot, \
-        #                 loc_[1] * htot,
-        #                 (loc_[2] - loc_[0]) * wtot,
-        #                 (loc_[3] - loc_[1]) * htot,
-        #                 prob_,
-        #                 inv_map[label_]])
-        #
-        # # Now we have all predictions from this rank, gather them all together
-        # # if necessary
-        # ret = np.array(ret).astype(np.float32)
+            true_boxes.append(boxes)
+            true_labels.append(labels)
 
         filenames = loader.dataset.images
         imgs_orig_sizes = loader.dataset.sizes
@@ -111,11 +84,13 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
         # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
         true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
-        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels)]
+        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels[0])]
         mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
 
         mean_iou = np.mean([utils.calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
                             for true_box, pred_box in zip(true_boxes, predicted_boxes)])
+
+        predicted_boxes = [torch.stack(pred_box).cpu().numpy() for pred_box in predicted_boxes]
 
         if verbose:
             print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
@@ -127,62 +102,5 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
             results.proper_mask = predicted_labels
             results.to_csv(save_csv, index=False, header=True)
             print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
+
         return mean_accuracy, mean_iou
-
-#############
-
-
-# def evaluate(model, coco, cocoGt, encoder, inv_map, args):
-#     ret = []
-#
-#     # for idx, image_id in enumerate(coco.img_keys):
-#     for nbatch, (img, img_id, img_size, _, _) in enumerate(coco):
-#         print("Parsing batch: {}/{}".format(nbatch, len(coco)), end='\r')
-#         with torch.no_grad():
-#             inp = img.cuda()
-#             if args.amp:
-#                 inp = inp.half()
-#
-#             # Get predictions
-#             ploc, plabel = model(inp)
-#             ploc, plabel = ploc.float(), plabel.float()
-#
-#             # Handle the batch of predictions produced
-#             # This is slow, but consistent with old implementation.
-#             for idx in range(ploc.shape[0]):
-#                 # ease-of-use for specific predictions
-#                 ploc_i = ploc[idx, :, :].unsqueeze(0)
-#                 plabel_i = plabel[idx, :, :].unsqueeze(0)
-#
-#                 try:
-#                     result = encoder.decode_batch(ploc_i, plabel_i, 0.50, 200)[0]
-#                 except:
-#                     # raise
-#                     print("")
-#                     print("No object detected in idx: {}".format(idx))
-#                     continue
-#
-#                 htot, wtot = img_size[0][idx].item(), img_size[1][idx].item()
-#                 loc, label, prob = [r.cpu().numpy() for r in result]
-#                 for loc_, label_, prob_ in zip(loc, label, prob):
-#                     ret.append([img_id[idx], loc_[0] * wtot, \
-#                                 loc_[1] * htot,
-#                                 (loc_[2] - loc_[0]) * wtot,
-#                                 (loc_[3] - loc_[1]) * htot,
-#                                 prob_,
-#                                 inv_map[label_]])
-#
-#     # Now we have all predictions from this rank, gather them all together
-#     # if necessary
-#     ret = np.array(ret).astype(np.float32)
-#
-#
-#     final_results = ret
-#
-#     cocoDt = cocoGt.loadRes(final_results)
-#
-#     # E = COCOeval(cocoGt, cocoDt, iouType='bbox')
-#     # E.evaluate()
-#     # E.accumulate()
-#     #
-#     return E.stats[0]  # Average Precision  (AP) @[ IoU=050:0.95 | area=   all | maxDets=100 ]

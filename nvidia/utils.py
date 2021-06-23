@@ -143,7 +143,7 @@ class Encoder(object):
     """
 
     def __init__(self, dboxes):
-        self.dboxes = dboxes(order="ltrb") # call function
+        self.dboxes = dboxes(order="ltrb")  # call function
         self.dboxes_xywh = dboxes(order="xywh").unsqueeze(dim=0)
         self.nboxes = self.dboxes.size(0)
         self.scale_xy = dboxes.scale_xy
@@ -196,7 +196,8 @@ class Encoder(object):
         bboxes_in[:, :, :2] = self.scale_xy * bboxes_in[:, :, :2]
         bboxes_in[:, :, 2:] = self.scale_wh * bboxes_in[:, :, 2:]
 
-        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :, :2]  # TODO this one
+        bboxes_in[:, :, :2] = bboxes_in[:, :, :2] * self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :,
+                                                                                 :2]  # TODO this one
         bboxes_in[:, :, 2:] = bboxes_in[:, :, 2:].exp() * self.dboxes_xywh[:, :, 2:]
 
         # Transform format to ltrb
