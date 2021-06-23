@@ -12,7 +12,8 @@ args = parser.parse_args()
 
 # Define device and checkpoint path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = 'checkpoint_nvidia_ssd300_epoch=<epoch>.pth.tar'  # TODO YOTAM change
+checkpoint = r'/home/student/checkpoint_nvidia_ssd300_epoch=84.pth.tar'  # TODO YOTAM change
+print(f"Evaluating data from path {args.input_folder}, checkpoint name {checkpoint}")
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -44,5 +45,4 @@ boxes = utils.create_boxes()
 encoder = utils.Encoder(boxes)
 
 # Evaluate model on given data
-print(f"Evaluating data from path {args.input_folder}")
 evaluate(dataloader, model, encoder, save_csv="prediction.csv", verbose=True)

@@ -55,10 +55,12 @@ def evaluate(loader, model, encoder, save_csv=False, verbose=False):
                     # result is list of (bboxes_out, labels_out, scores_out)s
                     det_boxes.append(result[0])
                     det_labels.append(result[1])
-                    det_scores.append(result[2])
-                except:
-                    print("")
+                    det_scores.append(result[2])  # TODO YOTAM: we don't need this
+                except Exception as e:
+                    print(f"Exception: {e}")
                     print("No object detected in idx: {}".format(idx))
+                    # TODO YOTAM: return something? we must have some box prediction and label for each sample
+                    #  I guess it should be something like [0,0,1,1] and [1] or [2]
                     continue
 
             # Store this batch's results for accuracy, IoU calculation
