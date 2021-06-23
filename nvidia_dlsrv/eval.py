@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 import json
-import utils as utils
+import utils
 
 
 def evaluate(loader, model, encoder, save_csv=False, verbose=False):
@@ -48,8 +48,8 @@ def evaluate(loader, model, encoder, save_csv=False, verbose=False):
                 ploc_i = ploc[idx, :, :].unsqueeze(0)
                 plabel_i = plabel[idx, :, :].unsqueeze(0)
 
-                ploc_i = ploc_i.permute(0, 2, 1)  # [1, 8732, 4] -> [1, 4, 8732]
-                plabel_i = plabel_i.permute(0, 2, 1)  # [1, 8732, 3] -> [1, 3, 8732]
+                ploc_i = ploc_i.permute(0, 2, 1)  # [1, 8732, 4] -> [1, 4, 8732] # TODO YOTAM: the shapes not like writen
+                plabel_i = plabel_i.permute(0, 2, 1)  # [1, 8732, 3] -> [1, 3, 8732] # TODO YOTAM: the shapes not like writen
                 try:
                     result = encoder.decode_batch(ploc_i, plabel_i, criteria=0.50, max_output=200)[0]
                     # result is list of (bboxes_out, labels_out, scores_out)s
@@ -57,7 +57,7 @@ def evaluate(loader, model, encoder, save_csv=False, verbose=False):
                     det_labels.append(result[1])
                     det_scores.append(result[2])  # TODO YOTAM: we don't need this
                 except Exception as e:
-                    print(f"Exception: {e}")
+                    print(f"\nException: {e}")
                     print("No object detected in idx: {}".format(idx))
                     # TODO YOTAM: return something? we must have some box prediction and label for each sample
                     #  I guess it should be something like [0,0,1,1] and [1] or [2]
