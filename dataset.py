@@ -20,7 +20,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = sorted(os.listdir(data_folder))
+        self.images = sorted(os.listdir(data_folder))[:40]  # TODO YOTAM
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             paths_to_exclude = []
@@ -54,7 +54,7 @@ class MasksDataset(Dataset):
             # copy sample to avoid making changes to original data
             new_image, new_box, new_label = image.copy(), box.clone(), label.clone()
 
-            # Apply transformations
+            # Apply transformations and augmentations
             new_image, new_box, new_label = transform(new_image, new_box, new_label, split=self.split)
             return new_image, new_box, new_label
         else:

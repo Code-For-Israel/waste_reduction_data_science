@@ -465,8 +465,6 @@ class SSD300(nn.Module):
             max_scores, best_label = predicted_scores[i].max(dim=1)  # (8732)
 
             # Check for each class
-            # TODO GAL 1 and not 0 because we don't want background class? why range is until n_classes and not n_classes+1?
-            #  YOTAM: that's alright because n.classes = 3 in our case, than in the for you go over c=1, c=2 (proper, not_proper)
             for c in range(1, self.n_classes):
                 # Keep only predicted boxes and scores where scores for this class are above the minimum score
                 class_scores = predicted_scores[i][:, c]  # (8732)

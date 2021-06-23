@@ -3,9 +3,10 @@ from tqdm import tqdm
 import torch.utils.data
 import numpy as np
 import pandas as pd
+import json
 
 
-def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
+def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=False):
     """
     Evaluate.
 

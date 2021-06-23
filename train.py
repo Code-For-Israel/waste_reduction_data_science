@@ -22,13 +22,10 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 20  # batch size
-workers = 4  # number of workers for loading data in the DataLoader
+batch_size = 40  # batch size
+workers = 6  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
-min_score = 0.15  # TODO
-topk = 10
-lr = 1e-3  # learning rate TODO
-# momentum = 0.9  # momentum TODO
+lr = 5e-3  # learning rate TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -36,7 +33,7 @@ grad_clip = None
 
 cudnn.benchmark = True
 
-checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
+checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar' TODO continue training (possible option)
 if checkpoint:
     start_epoch = int(checkpoint.split('=')[-1].split('.')[0])
 else:
@@ -47,15 +44,13 @@ def main():
     """
     Training.
     """
-    global label_map, epoch, decay_lr_at, checkpoint
+    global label_map, epoch, checkpoint
 
     # Initialize model
     model = SSD300(n_classes=n_classes)
     if checkpoint:
         checkpoint = torch.load(checkpoint)
         model.load_state_dict(checkpoint['state_dict'])
-    print(f"min_score = {min_score}")
-    print(f"top_k = {topk}")
     # Initialize the optimizer, with twice the default learning rate for biases, as in the original Caffe repo
     biases = list()
     not_biases = list()
@@ -66,7 +61,7 @@ def main():
             else:
                 not_biases.append(param)
     optimizer = torch.optim.Adam(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                 lr=lr, weight_decay=weight_decay)  # TODO SGD with momentum=momentum \ Adam
+                                 lr=lr, weight_decay=weight_decay)
 
     # Move to default device
     model = model.to(device)
@@ -84,7 +79,7 @@ def main():
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 5  # TODO change
+    epochs = 500  # TODO change
 
     # Epochs
     for epoch in range(start_epoch, epochs):
@@ -99,9 +94,8 @@ def main():
         save_checkpoint(epoch, model)
 
         # Evaluate test set
-        # TODO change to test_loader, Remove if
-        if not epoch % 40 and epoch != 0:
-            evaluate(test_loader, model, min_score=min_score, topk=topk, verbose=True)
+        # TODO back to test_loader
+        evaluate(train_loader, model, verbose=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -132,9 +126,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # Forward prop.
         predicted_locs, predicted_scores = model(images)  # (N, 8732, 4), (N, 8732, n_classes=3)
-        # TODO YOTAM, GAL: Shoval asked me why doesn't the predicted go through model.detect_objects() as well
-        #  this is kinda weird that the train is different from the eval phase.
-        #  GAL maybe we should try first run the model without detect_objects() to improve all offsets predictions.
 
         # Loss
         loss = criterion(predicted_locs, predicted_scores, boxes, labels)  # scalar
