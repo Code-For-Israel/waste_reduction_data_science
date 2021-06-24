@@ -660,7 +660,7 @@ class MultiBoxLoss(nn.Module):
         conf_loss = (conf_loss_hard_neg.sum() + conf_loss_pos.sum()) / n_positives.sum().float()  # (), scalar
 
         # TOTAL LOSS
-        print(conf_loss.item(), self.alpha * loc_loss.item())  # TODO Print
+        # print(conf_loss.item(), self.alpha * loc_loss.item())  # TODO Print
         # if np.isnan(conf_loss.item()) or np.isnan(loc_loss.item()):
         #     print(conf_loss.item(), self.alpha * loc_loss.item())  # TODO Print
         return conf_loss + self.alpha * loc_loss
