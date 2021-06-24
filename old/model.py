@@ -1,3 +1,4 @@
+import numpy as np
 from torch import nn
 from utils import *
 import torch.nn.functional as F
@@ -660,4 +661,6 @@ class MultiBoxLoss(nn.Module):
 
         # TOTAL LOSS
         # print(conf_loss.item(), self.alpha * loc_loss.item())  # TODO Print
+        # if np.isnan(conf_loss.item()) or np.isnan(loc_loss.item()):
+        #     print(conf_loss.item(), self.alpha * loc_loss.item())  # TODO Print
         return conf_loss + self.alpha * loc_loss

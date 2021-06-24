@@ -477,24 +477,50 @@ def photometric_distort(image):
     return new_image
 
 
-def transform(image, box, label, split):
-    assert split in {'TRAIN', 'TEST'}
+def transform(image, boxes, labels, split):
+    """
+    Apply the transformations above.
 
-    # Mean and standard deviation of ImageNet data that our base VGG from torchvision was trained on
-    # see: https://pytorch.org/docs/stable/torchvision/models.html
-    # mean = [0.485, 0.456, 0.406]
-    # std = [0.229, 0.224, 0.225]
+    :param image: image, a PIL Image
+    :param boxes: bounding boxes in boundary coordinates, a tensor of dimensions (n_objects, 4)
+    :param labels: labels of objects, a tensor of dimensions (n_objects)
+    :param split: one of 'TRAIN' or 'TEST', since different sets of transformations are applied
+    :return: transformed image, transformed bounding box coordinates, transformed labels, transformed difficulties
+    """
+    assert split in {'TRAIN', 'TEST'}
 
     # MaskDataset train set mean and std
     mean = [0.5244, 0.4904, 0.4781]
     std = [0.2642, 0.2608, 0.2561]
 
     new_image = image
-    new_box = box
-    new_label = label
+    new_boxes = boxes
+    new_labels = labels
+    # Skip the following operations for evaluation/testing
+    if split == 'TRAIN':
+        # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+        new_image = photometric_distort(new_image)
+
+        # Convert PIL image to Torch tensor
+        new_image = FT.to_tensor(new_image)
+
+        # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
+        # Fill surrounding space with the mean of ImageNet data that our base VGG was trained on
+        if random.random() < 0.5:
+            new_image, new_boxes = expand(new_image, boxes, filler=mean)
+
+        # Randomly crop image (zoom in)
+        new_image, new_boxes, new_labels = random_crop(new_image, new_boxes, new_labels)
+
+        # Convert Torch tensor to PIL image
+        new_image = FT.to_pil_image(new_image)
+
+        # Flip image with a 50% chance
+        if random.random() < 0.5:
+            new_image, new_boxes = flip(new_image, new_boxes)
 
     # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
-    new_image, new_box = resize(new_image, new_box, dims=(300, 300))
+    new_image, new_boxes = resize(new_image, new_boxes, dims=(300, 300))
 
     # Convert PIL image to Torch tensor
     new_image = FT.to_tensor(new_image)
@@ -502,7 +528,7 @@ def transform(image, box, label, split):
     # Normalize by mean and standard deviation of ImageNet data that our base VGG was trained on
     new_image = FT.normalize(new_image, mean=mean, std=std)
 
-    return new_image, new_box, new_label
+    return new_image, new_boxes, new_labels
 
 
 def adjust_learning_rate(optimizer, scale):

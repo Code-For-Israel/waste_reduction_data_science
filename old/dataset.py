@@ -23,13 +23,13 @@ class MasksDataset(Dataset):
         self.images = sorted(os.listdir(data_folder))
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
-            paths_to_exclude = []
+            self.paths_to_exclude = []
             for path in self.images:
                 image_id, bbox, proper_mask = path.strip(".jpg").split("__")
                 x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
-                if w <= 0 or h <= 0:
-                    paths_to_exclude.append(path)
-            self.images = [path for path in self.images if path not in paths_to_exclude]
+                if w <= 10 or h <= 10:  # TODO YOTAM : Filter bad bboxes
+                    self.paths_to_exclude.append(path)
+            self.images = [path for path in self.images if path not in self.paths_to_exclude]
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
@@ -47,14 +47,12 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
-        sample = self.loaded_imgs[i]
+        image_id, image, box, label = self.loaded_imgs[i]  # str, PIL, tensor, tensor
 
-        if self.split == 'TRAIN':
-            img = sample[1]
-            # TODO Augmentation on img - make a copy first (!!!!!!)
-            return img, sample[2], sample[3]
-        else:  # TEST
-            return sample[1], sample[2], sample[3]  # image, box, label
+        # Apply transformations
+        image, box, label = transform(image.copy(), box.clone(), label.clone(), split=self.split)
+
+        return image, box, label  # tensor, tensor, tensor
 
     def __len__(self):
         return len(self.images)
@@ -68,13 +66,10 @@ class MasksDataset(Dataset):
         # Read image
         image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
 
-        box = torch.FloatTensor(bbox)  # (1, 4)
+        box = torch.FloatTensor([bbox])  # (1, 4)
         label = torch.LongTensor(proper_mask)  # (1)
 
-        # Apply transformations
-        image, box, label = transform(image, box, label, split=self.split)
-
-        return image_id, image, box, label
+        return image_id, image, box, label  # str, PIL, tensor, tensor
 
 
 if __name__ == '__main__':

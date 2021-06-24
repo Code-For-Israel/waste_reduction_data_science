@@ -22,19 +22,18 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 40  # batch size
+batch_size = 40  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
 min_score = 0.01
 topk = 200
-lr = 5e-3  # learning rate TODO
-# momentum = 0.9  # momentum TODO
+lr = 2e-3  # learning rate TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
 grad_clip = None
 
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
 if checkpoint:
@@ -70,7 +69,8 @@ def main():
 
     # Move to default device
     model = model.to(device)
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, alpha=10.).to(device)  # TODO original alpha is 1.
+    # TODO original values: neg_pos_ratio=3, alpha=1.
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, neg_pos_ratio=1, alpha=3.).to(device)
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
@@ -127,7 +127,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - start)
         # Move to default device
         images = images.to(device)  # (batch_size (N), 3, 300, 300)
-        boxes = [b.to(device) for b in boxes]
+        boxes = [b.to(device) for b in boxes.clamp(1e-8, 1 - 1e-8)]
         labels = [l.to(device) for l in labels]
 
         # Forward prop.
