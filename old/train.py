@@ -7,6 +7,7 @@ from dataset import MasksDataset
 from utils import *
 from eval import evaluate
 import constants
+import pickle
 
 # Label map
 masks_labels = ('proper', 'not_porper')
@@ -85,15 +86,20 @@ def main():
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = 500  # TODO change
-
+    train_losses = []
     # Epochs
     for epoch in range(start_epoch, epochs):
         # One epoch's training
-        train(train_loader=train_loader,
-              model=model,
-              criterion=criterion,
-              optimizer=optimizer,
-              epoch=epoch)
+        epoch_loss = train(train_loader=train_loader,
+                           model=model,
+                           criterion=criterion,
+                           optimizer=optimizer,
+                           epoch=epoch)
+        # Get the epoch loss and append to list
+        train_losses.append(epoch_loss)
+        # Save all the losses to pickled list
+        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/train_losses_list.pkl', 'wb') as f:
+            pickle.dump(train_losses, f)
 
         # Save checkpoint
         save_checkpoint(epoch, model)
@@ -161,6 +167,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
     del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
+    return losses.avg
 
 
 # TODO
