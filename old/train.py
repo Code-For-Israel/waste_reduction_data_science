@@ -28,7 +28,7 @@ workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 200  # print training status every __ batches
 min_score = 0.01
 topk = 200
-lr = 2e-3  # learning rate TODO
+lr = 1e-3  # learning rate TODO
 weight_decay = 5e-4  # weight decay
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -75,7 +75,7 @@ def main():
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False,  # TODO YOTAM
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers, pin_memory=True)
     test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
@@ -155,7 +155,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         losses.update(loss.item(), images.size(0))
         batch_time.update(time.time() - start)
-
         start = time.time()
 
         # Print status
