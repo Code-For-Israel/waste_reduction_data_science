@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 # Define device and checkpoint path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = '/home/student/facemask_obj_detect/checkpoint_ssd300_epoch=26.pth.tar'  # TODO YOTAM change
+checkpoint = '/home/student/checkpoint_ssd300_epoch=26.pth.tar'  # TODO YOTAM change
 
 # Label map
 masks_labels = ('proper', 'not_porper')
