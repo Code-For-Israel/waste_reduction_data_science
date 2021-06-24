@@ -53,6 +53,7 @@ def evaluate(loader, model, min_score, topk, save_csv=False, verbose=False):
         imgs_orig_sizes = loader.dataset.sizes
 
         # convert from fractional to non-fractional [x_min, y_min, x_max, y_max]
+        # TODO Clamp to [0, original width / height of image]
         predicted_boxes = [box * imgs_orig_sizes[i].to(device) for i, box in enumerate(det_boxes)]
 
         # convert to [x_min, y_min, w, h] format
