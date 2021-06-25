@@ -71,7 +71,7 @@ def main():
     # Move to default device
     model = model.to(device)
     # TODO original values: neg_pos_ratio=3, alpha=1.
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, neg_pos_ratio=1, alpha=3.).to(device)
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, neg_pos_ratio=0, alpha=3.).to(device)
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
