@@ -116,7 +116,7 @@ def main():
 
 def get_test_loss(test_loader, model):
     losses_meter = AverageMeter()  # loss
-    model.eval()
+    model.train()
     with torch.no_grad():
         for i, (images, targets) in enumerate(test_loader):
             images = [image.to(device) for image in images]
