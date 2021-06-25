@@ -29,7 +29,7 @@ print_freq = 200  # print training status every __ batches
 min_score = 0.01
 topk = 200
 lr = 1e-3  # learning rate TODO
-weight_decay = 5e-4  # weight decay
+weight_decay = 0  # weight decay TODO 5e-4
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
 grad_clip = None
@@ -71,7 +71,7 @@ def main():
     # Move to default device
     model = model.to(device)
     # TODO original values: neg_pos_ratio=3, alpha=1.
-    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, neg_pos_ratio=0, alpha=3.).to(device)
+    criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, neg_pos_ratio=0, alpha=batch_size).to(device)
 
     # Custom dataloaders
     train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
