@@ -11,6 +11,6 @@ dependencies:
       - pandas
       - opencv-python
       - matplotlib
-      - --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
+      - --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu112/torch_nightly.html
 
 # TODO specify version
