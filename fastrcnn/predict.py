@@ -34,7 +34,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 mean = [0.5244, 0.4904, 0.4781]
 std = [0.2642, 0.2608, 0.2561]
 
-checkpoint = torch.load('/home/student/facemask_obj_detect/fastrcnn/checkpoint_fasterrcnn_epoch=4.pth.tar')
+checkpoint = torch.load('/home/student/facemask_obj_detect/fastrcnn/checkpoint_fasterrcnn_epoch=4.pth.tar')  # TODO
 model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
                                                              pretrained_backbone=False,
                                                              image_mean=mean,

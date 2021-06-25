@@ -110,7 +110,7 @@ def main():
         metrics['test_accuracy'].append(test_mean_accuracy)
 
         # Save all the losses to pickled list
-        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/metrics.pkl', 'wb') as f:
+        with open('metrics.pkl', 'wb') as f:
             pickle.dump(metrics, f)
 
 

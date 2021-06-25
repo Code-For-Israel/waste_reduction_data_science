@@ -25,14 +25,14 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = sorted(os.listdir(data_folder))[:84]  # TODO
+        self.images = sorted(os.listdir(data_folder))
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             self.paths_to_exclude = []
             for path in self.images:
                 image_id, bbox, proper_mask = path.strip(".jpg").split("__")
                 x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
-                if w <= 10 or h <= 10:  # TODO YOTAM : Filter bad bboxes
+                if w <= 0 or h <= 0:  # TODO possibly filter
                     self.paths_to_exclude.append(path)
             self.images = [path for path in self.images if path not in self.paths_to_exclude]
 
