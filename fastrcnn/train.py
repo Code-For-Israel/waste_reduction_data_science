@@ -25,7 +25,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Learning parameters
 batch_size = 42  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
-print_freq = 200  # print training status every __ batches
+print_freq = 5  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
 weight_decay = 0  # weight decay TODO 5e-4
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
@@ -159,7 +159,7 @@ def train(train_loader, model, optimizer, epoch):
         start = time.time()
 
         # Print status
-        if i % print_freq == 0 or i == len(train_loader) - 1:
+        if (i % print_freq == 0 or i == len(train_loader) - 1) and i != 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
