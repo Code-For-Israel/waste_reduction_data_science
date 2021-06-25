@@ -1,12 +1,16 @@
-import torch
 from torch.utils.data import Dataset
 import json
 import os
 from PIL import Image
-from utils import resize
+from utils import *
 import constants
 import concurrent.futures
 import torchvision.transforms.functional as FT
+import random
+
+
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 
 class MasksDataset(Dataset):
@@ -21,7 +25,7 @@ class MasksDataset(Dataset):
         self.data_folder = data_folder
 
         # Read data file names
-        self.images = sorted(os.listdir(data_folder))
+        self.images = sorted(os.listdir(data_folder))[:84]  # TODO
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
             self.paths_to_exclude = []
@@ -48,14 +52,38 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
+        mean = [0.5244, 0.4904, 0.4781]
+
         # MaskDataset train set mean and std
         image_id, image, box, label = self.loaded_imgs[i]  # str, PIL, tensor, tensor
 
-        # Apply transformations
+        # Apply transformations and augmentations
         image, box, label = image.copy(), box.clone(), label.clone()
+        if self.split == 'TRAIN':
+            # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+            image = photometric_distort(image)
+
+            # Convert PIL image to Torch tensor
+            image = FT.to_tensor(image)
+
+            # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
+            # Fill surrounding space with the mean
+            if random.random() < 0.5:
+                image, box = expand(image, box, filler=mean)
+
+            # Randomly crop image (zoom in)
+            image, box, label = random_crop(image, box, label)
+
+            # Convert Torch tensor to PIL image
+            image = FT.to_pil_image(image)
+
+            # Flip image with a 50% chance
+            if random.random() < 0.5:
+                image, box = flip(image, box)
 
         # non-fractional for Fast-RCNN
         image, box = resize(image, box, dims=(300, 300), return_percent_coords=False)  # PIL, tensor
+        box = box.clamp(0., 300.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
@@ -72,7 +100,6 @@ class MasksDataset(Dataset):
                       area=area,
                       iscrowd=torch.zeros_like(label, dtype=torch.int64))
 
-        # TODO ADD AUGMENTATIONS
         return image, target
 
     def __len__(self):
@@ -95,29 +122,11 @@ class MasksDataset(Dataset):
 
 if __name__ == '__main__':
     # check MasksDataset class
-    # total of ~22GB RAM are needed
     # train
     dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=5, shuffle=True)
-    (images, boxes, labels) = next(iter(train_loader))
-
-    mean = 0.
-    std = 0.
-    nb_samples = 0.
-    for i, (images, boxes, labels) in enumerate(train_loader):
-        data = images
-        batch_samples = data.size(0)
-        data = data.view(batch_samples, data.size(1), -1)
-        mean += data.mean(2).sum(0)
-        std += data.std(2).sum(0)
-        nb_samples += batch_samples
-
-    mean /= nb_samples
-    std /= nb_samples
-
-    print('train pixel mean values', mean)
-    print('train pixel std values', std)
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True, collate_fn=collate_fn)
+    images, targets = next(iter(train_loader))
 
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)

@@ -5,7 +5,7 @@ from dataset import MasksDataset
 from utils import AverageMeter, save_checkpoint
 import constants
 import pickle
-
+from eval import evaluate
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
@@ -32,12 +32,6 @@ weight_decay = 0  # weight decay TODO 5e-4
 # you will recognize it by a sorting error in the MuliBox loss calculation
 grad_clip = None
 
-checkpoint = ''  # '/home/student/checkpoint_ssd300_epoch=7.pth.tar'
-if checkpoint:
-    start_epoch = int(checkpoint.split('=')[-1].split('.')[0])
-else:
-    start_epoch = 0
-
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -62,10 +56,6 @@ def main():
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, n_classes).to(device)
 
-    if checkpoint:
-        checkpoint = torch.load(checkpoint)
-        model.load_state_dict(checkpoint['state_dict'])
-
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Custom dataloaders
@@ -76,44 +66,70 @@ def main():
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
                                               num_workers=workers, pin_memory=True, collate_fn=collate_fn)
 
+    # set split = test to avoid augmentations
+    unshuffled_train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')
+    unshuffled_train_loader = torch.utils.data.DataLoader(unshuffled_train_dataset, batch_size=batch_size,
+                                                          shuffle=False, num_workers=workers, pin_memory=True,
+                                                          collate_fn=collate_fn)
+
     # Calculate total number of epochs to train and the epochs to decay learning rate at
     # (i.e. convert iterations to epochs)
     # To convert iterations to epochs, divide iterations by the number of iterations per epoch
     # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
     epochs = 500  # TODO change
-    train_losses = []
+    metrics = dict(train_loss=[], train_iou=[], train_accuracy=[],
+                   test_loss=[], test_iou=[], test_accuracy=[])
     # Epochs
-    for epoch in range(start_epoch, epochs):
+    for epoch in range(epochs):
         # One epoch's training
-        epoch_loss = train(train_loader=train_loader,
+        train_loss = train(train_loader=train_loader,
                            model=model,
                            optimizer=optimizer,
                            epoch=epoch)
-        # Get the epoch loss and append to list
-        train_losses.append(epoch_loss)
-        # Save all the losses to pickled list
-        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/train_losses_list.pkl', 'wb') as f:
-            pickle.dump(train_losses, f)
 
         # Save checkpoint
         save_checkpoint(epoch, model)
 
-        # Load checkpoint TODO
-        # checkpoint = torch.load('checkpoint_fasterrcnn_epoch=1.pth.tar')
-        # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
-        #                                                              pretrained_backbone=False,
-        #                                                              image_mean=mean,
-        #                                                              image_std=std,
-        #                                                              min_size=300,
-        #                                                              max_size=300).to(device)
-        # in_features = model.roi_heads.box_predictor.cls_score.in_features
-        # model.roi_heads.box_predictor = FastRCNNPredictor(in_features, n_classes).to(device)
-        # model.load_state_dict(checkpoint['state_dict'])
-        #
-        # print('success')  # TODO
+        # Evaluate train set
+        train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
+        print(f'Train IoU = {round(float(train_mean_iou), 4)}, Accuracy = {round(float(train_mean_accuracy), 4)}')
+
+        # Test loss
+        test_loss = get_test_loss(test_loader, model)
 
         # Evaluate test set
-        # TODO eval
+        test_mean_accuracy, test_mean_iou = evaluate(test_loader, model)
+        print(f'Test IoU = {round(float(test_mean_iou), 4)}, Accuracy = {round(float(test_mean_accuracy), 4)}')
+
+        # Populate dict
+        metrics['train_loss'].append(train_loss)
+        metrics['train_iou'].append(train_mean_iou)
+        metrics['train_accuracy'].append(train_mean_accuracy)
+        metrics['test_loss'].append(test_loss)
+        metrics['test_iou'].append(test_mean_iou)
+        metrics['test_accuracy'].append(test_mean_accuracy)
+
+        # Save all the losses to pickled list
+        with open('/mnt/ml-srv1/home/yotamm/facemask_obj_detect/metrics.pkl', 'wb') as f:
+            pickle.dump(metrics, f)
+
+
+def get_test_loss(test_loader, model):
+    losses_meter = AverageMeter()  # loss
+    model.eval()
+    with torch.no_grad():
+        for i, (images, targets) in enumerate(test_loader):
+            images = [image.to(device) for image in images]
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+            # Forward prop
+            loss_dict = model(images, targets)
+
+            # Loss
+            losses = sum(loss for loss in loss_dict.values())
+            loss_value = losses.item()
+            losses_meter.update(loss_value, len(images))
+    return losses_meter.avg
 
 
 def train(train_loader, model, optimizer, epoch):
@@ -169,9 +185,6 @@ def train(train_loader, model, optimizer, epoch):
 
     return losses_meter.avg
 
-
-# TODO
-#  1. Add early stopping based on test metrics / loss
 
 if __name__ == '__main__':
     main()
