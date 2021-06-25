@@ -1,4 +1,4 @@
-name: fast # TODO
+name: fast
 
 dependencies:
   - python=3.7
@@ -14,4 +14,3 @@ dependencies:
       - --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
 
 # TODO specify version
-# TODO dont forget pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html -U
