@@ -60,26 +60,29 @@ class MasksDataset(Dataset):
         # Apply transformations and augmentations
         image, box, label = image.copy(), box.clone(), label.clone()
         if self.split == 'TRAIN':
-            # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
-            image = photometric_distort(image)
+            if random.random() < 0.8:  # with probability of 80% try augmentations
+                # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+                if random.random() < 0.5:
+                    image = photometric_distort(image)
 
-            # Convert PIL image to Torch tensor
-            image = FT.to_tensor(image)
+                # Convert PIL image to Torch tensor
+                image = FT.to_tensor(image)
 
-            # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
-            # Fill surrounding space with the mean
-            if random.random() < 0.5:
-                image, box = expand(image, box, filler=mean)
+                # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
+                # Fill surrounding space with the mean
+                if random.random() < 0.5:
+                    image, box = expand(image, box, filler=mean)
 
-            # Randomly crop image (zoom in)
-            image, box, label = random_crop(image, box, label)
+                # Randomly crop image (zoom in)
+                if random.random() < 0.5:
+                    image, box, label = random_crop(image, box, label)
 
-            # Convert Torch tensor to PIL image
-            image = FT.to_pil_image(image)
+                # Convert Torch tensor to PIL image
+                image = FT.to_pil_image(image)
 
-            # Flip image with a 50% chance
-            if random.random() < 0.5:
-                image, box = flip(image, box)
+                # Flip image with a 50% chance
+                if random.random() < 0.5:
+                    image, box = flip(image, box)
 
         # non-fractional for Fast-RCNN
         image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
@@ -88,8 +91,7 @@ class MasksDataset(Dataset):
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
 
-        # Normalize by mean and standard deviation -- No normalize for Fast-RCNN
-        # image = FT.normalize(image, mean=mean, std=std)
+        # No normalize for Fast-RCNN
 
         area = (box[:, 3] - box[:, 1]) * (box[:, 2] - box[:, 0])
         area = torch.as_tensor(area, dtype=torch.float32)

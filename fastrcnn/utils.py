@@ -155,7 +155,7 @@ def random_crop(image, boxes, labels):
     # Keep choosing a minimum overlap until a successful crop is made
     while True:
         # Randomly draw the value for minimum overlap
-        min_overlap = random.choice([0., .1, .3, .5, .7, .9, None])  # 'None' refers to no cropping
+        min_overlap = random.choice([.5, .7, .9, None])  # 'None' refers to no cropping
 
         # If not cropping
         if min_overlap is None:
@@ -263,7 +263,7 @@ def save_checkpoint(epoch, model):
     :param epoch: epoch number
     :param model: model
     """
-    filename = f'checkpoint_fasterrcnn_epoch={epoch + 1}.pth.tar'
+    filename = f'exp2_checkpoint_fasterrcnn_epoch={epoch + 1}.pth.tar'
     torch.save({'state_dict': model.state_dict()}, filename)
 
 
