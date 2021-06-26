@@ -43,8 +43,8 @@ def get_fasterrcnn_resnet50_fpn():
     # Initialize model
     model = fasterrcnn_resnet50_fpn(pretrained_backbone=False,
                                     image_mean=mean,
-                                    image_std=std)
-    # min_size=224,  # TODO try without
+                                    image_std=std,
+                                    min_size=224 * 3)  # TODO try without
     # max_size=224)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)
