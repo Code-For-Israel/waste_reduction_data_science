@@ -7,11 +7,13 @@ import constants
 import pickle
 from eval import evaluate
 from model import get_fasterrcnn_resnet50_fpn
+import torchvision
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 4  # batch size TODO
+batch_size = 10  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
@@ -33,6 +35,16 @@ def main():
 
     # Initialize model
     model = get_fasterrcnn_resnet50_fpn()
+    # mean = [0.5244, 0.4904, 0.4781]
+    # std = [0.2642, 0.2608, 0.2561]
+    # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained_backbone=False,
+    #                                 image_mean=mean,
+    #                                 image_std=std,
+    #                                 min_size=224,  # TODO try without
+    #                                 max_size=224)
+    # model = model.to(device)
+    # in_features = model.roi_heads.box_predictor.cls_score.in_features
+    # model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -188,6 +200,7 @@ test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4
 #  3. Random crop with only > 0.5 overlap (before it was accepted also 0., 0.1, 0.3)
 #  4. don't set min_size and max_size to FasterRCNN
 #  5. Filter train smaples with w <= 10 or h <= 10
+#  6. change min_size, max_size to their default
 
 
 # TODO detection mechanism

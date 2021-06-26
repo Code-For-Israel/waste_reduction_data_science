@@ -15,7 +15,7 @@ def resnet_fpn_backbone(backbone_name, pretrained):
     #     if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
     #         parameter.requires_grad_(False)
 
-    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
+    return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
 
     in_channels_stage2 = backbone.inplanes // 8
     in_channels_list = [
@@ -43,14 +43,13 @@ def get_fasterrcnn_resnet50_fpn():
     # Initialize model
     model = fasterrcnn_resnet50_fpn(pretrained_backbone=False,
                                     image_mean=mean,
-                                    image_std=std)  # ,
+                                    image_std=std)
     # min_size=224,  # TODO try without
     # max_size=224)
-    model = model.to(device)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3).to(device)
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)
 
-    return model
+    return model.to(device)
 
 
 if __name__ == '__main__':
