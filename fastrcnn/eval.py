@@ -54,7 +54,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
     # TODO make sure what's the best guess
     predicted_labels = ['True' if label == 1 else 'False' for label in all_images_labels]
 
-    # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
+    # take true boxes from the filenames with format [x_min, y_min, w, h]
     true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
     true_labels = [filename.strip(".jpg").split("__")[2] for filename in filenames]

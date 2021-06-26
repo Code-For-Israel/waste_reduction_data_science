@@ -82,13 +82,13 @@ def main():
     # Epochs
     for epoch in range(epochs):
         # One epoch's training
-        train_loss = train(train_loader=train_loader,
-                           model=model,
-                           optimizer=optimizer,
-                           epoch=epoch)
-
-        # Save checkpoint
-        save_checkpoint(epoch, model)
+        # train_loss = train(train_loader=train_loader,
+        #                    model=model,
+        #                    optimizer=optimizer,
+        #                    epoch=epoch)
+        #
+        # # Save checkpoint
+        # save_checkpoint(epoch, model)
 
         # Evaluate train set
         train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
@@ -185,6 +185,9 @@ def train(train_loader, model, optimizer, epoch):
 
     return losses_meter.avg
 
+
+# TODO:
+#  1. change all images to 224*224 instead of 300*300 ?
 
 if __name__ == '__main__':
     main()

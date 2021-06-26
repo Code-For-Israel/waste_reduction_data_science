@@ -108,6 +108,9 @@ class MasksDataset(Dataset):
     def load_single_img(self, path):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
+        if (w <= 0 or h <= 0) and self.split == 'TEST':
+            w = 1 if w <= 0 else w
+            h = 1 if h <= 0 else h
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
