@@ -11,7 +11,7 @@ from model import get_fasterrcnn_resnet50_fpn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 42  # batch size TODO
+batch_size = 32  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
