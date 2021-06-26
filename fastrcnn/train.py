@@ -11,7 +11,7 @@ from model import get_fasterrcnn_resnet50_fpn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 50  # batch size TODO
+batch_size = 42  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
@@ -189,7 +189,9 @@ test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4
 #  4. don't set min_size and max_size to FasterRCNN
 
 # TODO detection mechanism
-#  1. set detection threshold on scores before taking most left
+#  1. set detection threshold on scores before taking most-left
+#  2. take 2nd most-left if it's score is much higher than the 1st most-left
+#  3. weighted sum (on the scores) for few boxes (e.g. pred_box = 0.6box1 + 0.4box2)
 
 """
 for name, parm in model.named_parameters():
