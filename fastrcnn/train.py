@@ -11,7 +11,7 @@ from model import get_fasterrcnn_resnet50_fpn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 32  # batch size TODO
+batch_size = 25  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
@@ -187,6 +187,8 @@ test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4
 #       This added 53120 features (BN2d, unfreeze some layers in backbone)
 #  3. Random crop with only > 0.5 overlap (before it was accepted also 0., 0.1, 0.3)
 #  4. don't set min_size and max_size to FasterRCNN
+#  5. Filter train smaples with w <= 10 or h <= 10
+
 
 # TODO detection mechanism
 #  1. set detection threshold on scores before taking most-left
