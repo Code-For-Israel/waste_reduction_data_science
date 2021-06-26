@@ -13,7 +13,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 10  # batch size TODO
+batch_size = 8  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
