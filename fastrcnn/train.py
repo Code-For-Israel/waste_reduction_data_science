@@ -7,8 +7,6 @@ import constants
 import pickle
 from eval import evaluate
 from model import get_fasterrcnn_resnet50_fpn
-import torchvision
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,16 +33,6 @@ def main():
 
     # Initialize model
     model = get_fasterrcnn_resnet50_fpn()
-    # mean = [0.5244, 0.4904, 0.4781]
-    # std = [0.2642, 0.2608, 0.2561]
-    # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained_backbone=False,
-    #                                 image_mean=mean,
-    #                                 image_std=std,
-    #                                 min_size=224,  # TODO try without
-    #                                 max_size=224)
-    # model = model.to(device)
-    # in_features = model.roi_heads.box_predictor.cls_score.in_features
-    # model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 

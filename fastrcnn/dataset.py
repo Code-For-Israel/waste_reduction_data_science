@@ -86,7 +86,7 @@ class MasksDataset(Dataset):
 
         # non-fractional for Fast-RCNN
         image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
-        box = box.clamp(0., 224.)
+        box = box.clamp(1e-8, 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
