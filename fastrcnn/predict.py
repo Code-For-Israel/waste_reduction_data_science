@@ -39,8 +39,8 @@ model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
                                                              pretrained_backbone=False,
                                                              image_mean=mean,
                                                              image_std=std,
-                                                             min_size=300,
-                                                             max_size=300).to(device)
+                                                             min_size=224,
+                                                             max_size=224).to(device)
 in_features = model.roi_heads.box_predictor.cls_score.in_features
 model.roi_heads.box_predictor = FastRCNNPredictor(in_features, n_classes).to(device)
 model.load_state_dict(checkpoint['state_dict'])

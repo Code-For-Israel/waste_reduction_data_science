@@ -82,8 +82,8 @@ class MasksDataset(Dataset):
                 image, box = flip(image, box)
 
         # non-fractional for Fast-RCNN
-        image, box = resize(image, box, dims=(300, 300), return_percent_coords=False)  # PIL, tensor
-        box = box.clamp(0., 300.)
+        image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
+        box = box.clamp(0., 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
@@ -100,7 +100,7 @@ class MasksDataset(Dataset):
                       area=area,
                       iscrowd=torch.zeros_like(label, dtype=torch.int64))
 
-        return image, target
+        return image, target  # image is a tensor in [0, 1] (aka pixels divided by 255)
 
     def __len__(self):
         return len(self.images)
@@ -108,9 +108,12 @@ class MasksDataset(Dataset):
     def load_single_img(self, path):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
+
+        # it is promised that test set will not include non-positive w,h
         if (w <= 0 or h <= 0) and self.split == 'TEST':
             w = 1 if w <= 0 else w
             h = 1 if h <= 0 else h
+
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 

@@ -35,18 +35,18 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                     all_images_labels.append(labels[most_left_index].to(device))
                     all_images_scores.append(scores[most_left_index].to(device))
                 else:
-                    all_images_boxes.append(torch.FloatTensor([0., 0., 300., 300.]).to(device))
+                    all_images_boxes.append(torch.FloatTensor([0., 0., 224., 224.]).to(device))
                     all_images_labels.append(torch.IntTensor([0]).to(device))
                     all_images_scores.append(torch.FloatTensor([0.]).to(device))
 
     filenames = loader.dataset.images
     imgs_orig_sizes = loader.dataset.sizes
 
-    # clamp to [min=0, max=300] all predicted boxes
-    predicted_boxes = [box.clamp(0., 300.) for box in all_images_boxes]
+    # clamp to [min=0, max=224] all predicted boxes
+    predicted_boxes = [box.clamp(0., 224.) for box in all_images_boxes]
 
     # convert boxes back to their original sizes by the original width, height
-    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 300 for i, box in enumerate(all_images_boxes)]
+    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(all_images_boxes)]
 
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]

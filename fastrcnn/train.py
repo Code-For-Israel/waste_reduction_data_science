@@ -23,10 +23,10 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 42  # batch size TODO
+batch_size = 50  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
-print_freq = 5  # print training status every __ batches
-lr = 1e-3  # learning rate TODO
+print_freq = 20  # print training status every __ batches
+lr = 2e-3  # learning rate TODO
 weight_decay = 0  # weight decay TODO 5e-4
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
@@ -51,8 +51,8 @@ def main():
                                                                  pretrained_backbone=False,
                                                                  image_mean=mean,
                                                                  image_std=std,
-                                                                 min_size=300,
-                                                                 max_size=300).to(device)
+                                                                 min_size=224,
+                                                                 max_size=224).to(device)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, n_classes).to(device)
 
@@ -82,13 +82,13 @@ def main():
     # Epochs
     for epoch in range(epochs):
         # One epoch's training
-        # train_loss = train(train_loader=train_loader,
-        #                    model=model,
-        #                    optimizer=optimizer,
-        #                    epoch=epoch)
-        #
-        # # Save checkpoint
-        # save_checkpoint(epoch, model)
+        train_loss = train(train_loader=train_loader,
+                           model=model,
+                           optimizer=optimizer,
+                           epoch=epoch)
+
+        # Save checkpoint
+        save_checkpoint(epoch, model)
 
         # Evaluate train set
         train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
@@ -185,9 +185,6 @@ def train(train_loader, model, optimizer, epoch):
 
     return losses_meter.avg
 
-
-# TODO:
-#  1. change all images to 224*224 instead of 300*300 ?
 
 if __name__ == '__main__':
     main()
