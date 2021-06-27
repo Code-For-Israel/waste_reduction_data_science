@@ -69,16 +69,14 @@ def main():
 
         # Save checkpoint
         save_checkpoint(epoch, model)
-        print("finished train_loss")
+
         # Evaluate train set
         train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
         print(f'Train IoU = {round(float(train_mean_iou), 4)}, Accuracy = {round(float(train_mean_accuracy), 4)}')
-        print("train_mean_accuracy, train_mean_iou")
 
         # Evaluate test set
         test_mean_accuracy, test_mean_iou = evaluate(test_loader, model)
         print(f'Test IoU = {round(float(test_mean_iou), 4)}, Accuracy = {round(float(test_mean_accuracy), 4)}')
-        print("test_mean_accuracy, test_mean_iou")
 
         # Test loss
         test_loss = get_test_loss(test_loader, model)

@@ -60,6 +60,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
     mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
                         for true_box, pred_box in zip(true_boxes, predicted_boxes)])
     del predicted_boxes, all_images_boxes, all_images_labels, all_images_scores
+    torch.cuda.empty_cache()
 
     if verbose:
         print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
