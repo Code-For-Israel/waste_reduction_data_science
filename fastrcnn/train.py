@@ -93,6 +93,8 @@ def main():
         with open('exp2_metrics.pkl', 'wb') as f:
             pickle.dump(metrics, f)
 
+        torch.cuda.empty_cache()
+
 
 def get_test_loss(test_loader, model):
     losses_meter = AverageMeter()  # loss
