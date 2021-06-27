@@ -1,9 +1,14 @@
 import argparse
 import torch.utils.data
 from dataset import MasksDataset
-from nvidia.eval import evaluate_nvidia
-import nvidia.utils as utils
-from model import SSD300
+from model import get_fasterrcnn_resnet50_fpn
+from eval import evaluate
+import torch.backends.cudnn as cudnn
+from dataset import collate_fn
+import os
+import gdown
+
+cudnn.benchmark = True
 
 # Parsing script arguments
 parser = argparse.ArgumentParser(description='Process input')
@@ -12,40 +17,28 @@ args = parser.parse_args()
 
 # Define device and checkpoint path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# checkpoint = 'checkpoint_ssd300_epoch=3.pth.tar'  # TODO YOTAM change
 
-# Label map
-masks_labels = ('proper', 'not_porper')
-label_map = {k: v + 1 for v, k in enumerate(masks_labels)}
-label_map['background'] = 0
-rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
+mean = [0.5244, 0.4904, 0.4781]
+std = [0.2642, 0.2608, 0.2561]
 
-distinct_colors = ['#e6194b', '#3cb44b', '#FFFFFF']
-label_color_map = {k: distinct_colors[i] for i, k in enumerate(label_map.keys())}
+print('Downloading model weights ...')
+module_path = os.path.dirname(os.path.realpath(__file__))
+gdrive_file_id = '1S8kCRrSA__mCI4Z0SPVuWNRty-iVlixS'  # TODO change to the best model
 
-# Model parameters
-n_classes = len(label_map)  # number of different types of objects
-min_score = 0.01  # TODO modify before run
-topk = 200  # TODO modify before run
+url = f'https://drive.google.com/uc?id={gdrive_file_id}'
+weights_path = os.path.join(module_path, 'faster_rcnn.pth.tar')
+gdown.download(url, weights_path, quiet=False)
 
-# Load model checkpoint that is to be evaluated
-# checkpoint = torch.load(checkpoint)
-model = SSD300(n_classes=n_classes)
-# model.load_state_dict(checkpoint['state_dict'])
-model = model.to(device)
+print('Loading model ...')
+checkpoint = torch.load(weights_path)
+model = get_fasterrcnn_resnet50_fpn()
+model.load_state_dict(checkpoint['state_dict'])
 
-# Switch to eval mode
-model.eval()
-
-# Load data
+print('Loading data ...')
 dataset = MasksDataset(data_folder=args.input_folder, split='test')
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False,
-                                         num_workers=6, pin_memory=True)
-
-boxes = utils.create_boxes()
-encoder = utils.Encoder(boxes)
-
+                                         num_workers=1, pin_memory=False, collate_fn=collate_fn)
 
 # Evaluate model on given data
-print(f"Evaluating data from path {args.input_folder}, min_score={min_score}, top_k={topk}")
-evaluate_nvidia(dataloader, model, encoder, min_score=min_score, topk=topk, save_csv="prediction.csv", verbose=True)
+print(f"Evaluating data from path {args.input_folder}")
+evaluate(dataloader, model, save_csv="prediction.csv", verbose=True)

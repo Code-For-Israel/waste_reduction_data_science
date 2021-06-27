@@ -1,89 +1,76 @@
-from utils import *
-from tqdm import tqdm
-import torch.utils.data
+import torch
+import json
 import numpy as np
 import pandas as pd
-import json
+from utils import calc_iou
 import os
 
-def evaluate(loader, model, min_score=0.01, topk=200, save_csv=False, verbose=False):
-    """
-    Evaluate.
 
-    :param loader: DataLoader for test data, created with shuffle=False
-    :param model: model
-    :param min_score: minimum score for detect_objects()
-    :param topk: take k top boxes by scores per image
-    :param save_csv: False or path to save file with predicted results
-    :param verbose: whether to print IoU and accuracy or not
-    return mean_accuracy, mean_iou for all the data in `loader`
-    """
+def evaluate(loader, model, save_csv=False, verbose=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Make sure it's in eval mode
+    all_images_boxes = list()
+    all_images_labels = list()
+    all_images_scores = list()
+
     model.eval()
-
-    # Lists to store detected and true boxes, labels, scores
-    det_boxes = list()
-    det_labels = list()
-    det_scores = list()
-    true_labels = list()
-
     with torch.no_grad():
-        # Batches
-        for i, (images, _, labels) in enumerate(tqdm(loader, desc='Evaluating')):
-            images = images.to(device)  # (N, 3, 300, 300)
+        for i, (images, _) in enumerate(loader):
+            # Move to default device
+            images = [image.to(device) for image in images]
 
-            # Forward prop.
-            predicted_locs, predicted_scores = model(images)
+            # Forward prop
+            res = model(images)
 
-            # Detect objects in SSD output
-            det_boxes_batch, det_labels_batch, det_scores_batch = model.detect_objects(predicted_locs, predicted_scores,
-                                                                                       min_score=min_score,
-                                                                                       max_overlap=0.45,
-                                                                                       top_k=topk)
-            # Evaluation MUST be at min_score=0.01, max_overlap=0.45, top_k=200 for
-            # fair comparison with the paper's results and other repos
-            # TODO YOTAM look what parameters we want, min_score=GAL 0.01 sounds really low
+            for k in range(len(images)):
+                boxes = res[k].get("boxes", None)
+                labels = res[k].get("labels", None)
+                scores = res[k].get("scores", None)
+                if boxes is not None and labels is not None and scores is not None \
+                        and torch.numel(boxes) != 0 and torch.numel(labels) != 0 and torch.numel(scores) != 0:
+                    # [xmin, ymin, xmax, ymax] non-fractional
+                    # Note: one box because our faster rcnn model defined with box_detections_per_img=1
+                    all_images_boxes.append(boxes[0].to(device))
+                    all_images_labels.append(labels[0].to(device))
+                    all_images_scores.append(scores[0].to(device))
+                else:
+                    all_images_boxes.append(torch.FloatTensor([0., 0., 224., 224.]).to(device))
+                    all_images_labels.append(torch.IntTensor([0]).to(device))
+                    all_images_scores.append(torch.FloatTensor([0.]).to(device))
+            del images, res, boxes, labels, scores
 
-            # Store this batch's results for accuracy, IoU calculation
-            labels = [l.to(device) for l in labels]
+    filenames = loader.dataset.images
+    imgs_orig_sizes = loader.dataset.sizes
 
-            det_boxes.extend(det_boxes_batch)
-            det_labels.extend(det_labels_batch)
-            det_scores.extend(det_scores_batch)
-            true_labels.extend(labels)
+    # convert boxes back to their original sizes by the original width, height
+    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(all_images_boxes)]
 
-        filenames = loader.dataset.images
-        imgs_orig_sizes = loader.dataset.sizes
+    # convert to [x_min, y_min, w, h] format
+    predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]
 
-        # convert from fractional to non-fractional [x_min, y_min, x_max, y_max]
-        predicted_boxes = [box * imgs_orig_sizes[i].to(device) for i, box in enumerate(det_boxes)]
+    predicted_labels = ['True' if label == 1 else 'False' for label in all_images_labels]
 
-        # convert to [x_min, y_min, w, h] format
-        predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in
-                           predicted_boxes]
+    # take true boxes from the filenames with format [x_min, y_min, w, h]
+    true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
 
-        # TODO make sure what's the best guess
-        predicted_labels = ['True' if label == 1 else 'False' for label in det_labels]
+    true_labels = [filename.strip(".jpg").split("__")[2] for filename in filenames]
+    mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
 
-        # overwrite the true_boxes to take it from the filenames with format [x_min, y_min, w, h]
-        true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
+    mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
+                        for true_box, pred_box in zip(true_boxes, predicted_boxes)])
 
-        true_labels = ['True' if label == 1 else 'False' for label in torch.cat(true_labels)]
-        mean_accuracy = np.mean([pred == true for pred, true in zip(predicted_labels, true_labels)])
+    if verbose:
+        print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
 
-        mean_iou = np.mean([calc_iou(true_box, torch.stack(pred_box).cpu().numpy())
-                            for true_box, pred_box in zip(true_boxes, predicted_boxes)])
+    if save_csv:
+        results = pd.DataFrame(columns=['filename', 'x', 'y', 'w', 'h', 'proper_mask'])
+        results.filename = filenames
+        results.x, results.y, results.w, results.h = zip(*predicted_boxes)
+        results.proper_mask = predicted_labels
+        results.to_csv(save_csv, index=False, header=True)
+        print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
 
-        if verbose:
-            print(f'IoU = {round(float(mean_iou), 4)}, Accuracy = {round(float(mean_accuracy), 4)}')
+    del predicted_boxes, all_images_boxes, all_images_labels, all_images_scores
+    torch.cuda.empty_cache()
 
-        if save_csv:
-            results = pd.DataFrame(columns=['filename', 'x', 'y', 'w', 'h', 'proper_mask'])
-            results.filename = filenames
-            results.x, results.y, results.w, results.h = zip(*predicted_boxes)
-            results.proper_mask = predicted_labels
-            results.to_csv(save_csv, index=False, header=True)
-            print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
-        return mean_accuracy, mean_iou
+    return mean_accuracy, mean_iou

@@ -1,4 +1,3 @@
-import torch
 from torch.utils.data import Dataset
 import json
 import os
@@ -6,6 +5,12 @@ from PIL import Image
 from utils import *
 import constants
 import concurrent.futures
+import torchvision.transforms.functional as FT
+import random
+
+
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 
 class MasksDataset(Dataset):
@@ -23,13 +28,13 @@ class MasksDataset(Dataset):
         self.images = sorted(os.listdir(data_folder))
         if self.split == 'TRAIN':
             # exclude problematic images with width or heigh equal to 0
-            paths_to_exclude = []
+            self.paths_to_exclude = []
             for path in self.images:
                 image_id, bbox, proper_mask = path.strip(".jpg").split("__")
                 x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
                 if w <= 0 or h <= 0:
-                    paths_to_exclude.append(path)
-            self.images = [path for path in self.images if path not in paths_to_exclude]
+                    self.paths_to_exclude.append(path)
+            self.images = [path for path in self.images if path not in self.paths_to_exclude]
 
         # Load data to RAM using multiprocess
         self.loaded_imgs = []
@@ -47,20 +52,57 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
+        mean = [0.5244, 0.4904, 0.4781]
+
+        # MaskDataset train set mean and std
+        image_id, image, box, label = self.loaded_imgs[i]  # str, PIL, tensor, tensor
+
+        # Apply transformations and augmentations
+        image, box, label = image.copy(), box.clone(), label.clone()
         if self.split == 'TRAIN':
-            # get sample from saved object
-            image_id, image, box, label = self.loaded_imgs[i]  # str, PIL.image, tensor, tensor
+            if random.random() < 0.8:  # with probability of 80% try augmentations
+                # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+                if random.random() < 0.5:
+                    image = photometric_distort(image)
 
-            # copy sample to avoid making changes to original data
-            new_image, new_box, new_label = image.copy(), box.clone(), label.clone()
+                # Convert PIL image to Torch tensor
+                image = FT.to_tensor(image)
 
-            # Apply transformations and augmentations
-            new_image, new_box, new_label = transform(new_image, new_box, new_label, split=self.split)
-            return new_image, new_box, new_label
-        else:
-            # get sample from saved object
-            image_id, image, box, label = self.loaded_imgs[i]  # str, tensor, tensor, tensor
-            return image, box, label
+                # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
+                # Fill surrounding space with the mean
+                if random.random() < 0.5:
+                    image, box = expand(image, box, filler=mean)
+
+                # Randomly crop image (zoom in)
+                if random.random() < 0.5:
+                    image, box, label = random_crop(image, box, label)
+
+                # Convert Torch tensor to PIL image
+                image = FT.to_pil_image(image)
+
+                # Flip image with a 50% chance
+                if random.random() < 0.5:
+                    image, box = flip(image, box)
+
+        # non-fractional for Fast-RCNN
+        image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
+        box = box.clamp(0., 224.)
+
+        # Convert PIL image to Torch tensor
+        image = FT.to_tensor(image)
+
+        # No normalize for Fast-RCNN
+
+        area = (box[:, 3] - box[:, 1]) * (box[:, 2] - box[:, 0])
+        area = torch.as_tensor(area, dtype=torch.float32)
+
+        target = dict(boxes=box,
+                      labels=label,
+                      image_id=torch.tensor([torch.tensor(int(image_id))]),
+                      area=area,
+                      iscrowd=torch.zeros_like(label, dtype=torch.int64))
+
+        return image, target  # image is a tensor in [0, 1] (aka pixels divided by 255)
 
     def __len__(self):
         return len(self.images)
@@ -68,8 +110,13 @@ class MasksDataset(Dataset):
     def load_single_img(self, path):
         image_id, bbox, proper_mask = path.strip(".jpg").split("__")
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
+
+        # it is promised that test set will not include non-positive w,h
+        if (w <= 0 or h <= 0) and self.split == 'TEST':
+            w = 1 if w <= 0 else w
+            h = 1 if h <= 0 else h
+
         bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
-        bbox = [number if number != 0 else 1e-8 for number in bbox]  # to avoid inf in smooth_l1 in loss function
         proper_mask = [1] if proper_mask.lower() == "true" else [2]
 
         # Read image
@@ -78,77 +125,16 @@ class MasksDataset(Dataset):
         box = torch.FloatTensor([bbox])  # (1, 4)
         label = torch.LongTensor(proper_mask)  # (1)
 
-        if self.split == 'TRAIN':
-            return image_id, image, box, label  # str, PIL.image, tensor, tensor
-        else:
-            mean = [0.5244, 0.4904, 0.4781]
-            std = [0.2642, 0.2608, 0.2561]
-
-            # Resize image to (300, 300) - this also converts absolute boundary coordinates to their fractional form
-            new_image, new_box = resize(image, box, dims=(300, 300))
-
-            # Convert PIL image to Torch tensor
-            new_image = FT.to_tensor(new_image)
-
-            # Normalize by mean and standard deviation of ImageNet data that our base VGG was trained on
-            new_image = FT.normalize(new_image, mean=mean, std=std)
-            return image_id, new_image, new_box, label
-
-
-def calculate_mean_std(path_to_images, size=300):
-    """
-    Calculate the mean ans std of image dataset
-    :param path_to_images: (str) path to images folder
-    """
-    from torch.utils.data import Dataset
-    from torch.utils.data import DataLoader
-    from torchvision import transforms
-    from PIL import Image
-    import os
-
-    class CustomDataSet(Dataset):
-        def __init__(self, main_dir, transform):
-            self.main_dir = main_dir
-            self.transform = transform
-            self.all_imgs = os.listdir(main_dir)
-
-        def __len__(self):
-            return len(self.all_imgs)
-
-        def __getitem__(self, idx):
-            img_loc = os.path.join(self.main_dir, self.all_imgs[idx])
-            image = Image.open(img_loc).convert("RGB")
-            tensor_image = self.transform(image)
-            return tensor_image
-
-    dataset = CustomDataSet(path_to_images, transforms.Compose([transforms.Resize(size), transforms.ToTensor()]))
-
-    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
-
-    mean = 0.
-    std = 0.
-    nb_samples = 0.
-    for data in loader:
-        batch_samples = data.size(0)
-        data = data.view(batch_samples, data.size(1), -1)
-        mean += data.mean(2).sum(0)
-        std += data.std(2).sum(0)
-        nb_samples += batch_samples
-
-    mean /= nb_samples
-    std /= nb_samples
-    print('train pixel mean values', mean)
-    print('train pixel std values', std)
+        return image_id, image, box, label  # str, PIL, tensor, tensor
 
 
 if __name__ == '__main__':
     # check MasksDataset class
-    # total of ~22GB RAM are needed
     # train
     dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=True)
-    (images, boxes, labels) = next(iter(train_loader))
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True, collate_fn=collate_fn)
+    images, targets = next(iter(train_loader))
 
     # test
     dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=24, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)
