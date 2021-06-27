@@ -151,8 +151,8 @@ def train(train_loader, model, optimizer, epoch):
         optimizer.zero_grad()
         losses.backward()
 
-        # if exploding gradients: TODO
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
+        # Clipping
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
         # printing gradients norms
         # max_norm = 0
         # for name, param in model.named_parameters():

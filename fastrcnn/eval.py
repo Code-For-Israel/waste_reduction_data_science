@@ -48,7 +48,6 @@ def evaluate(loader, model, save_csv=False, verbose=False):
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]
 
-    # TODO make sure what's the best guess
     predicted_labels = ['True' if label == 1 else 'False' for label in all_images_labels]
 
     # take true boxes from the filenames with format [x_min, y_min, w, h]
