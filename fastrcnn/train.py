@@ -152,15 +152,15 @@ def train(train_loader, model, optimizer, epoch):
         losses.backward()
 
         # Clipping TODO maybe smaller max_norm? (2?)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
         # printing gradients norms
-        # max_norm = 0
-        # for name, param in model.named_parameters():
-        #     norm = param.grad.norm(2)
-        #     # print(name, norm)
-        #     if norm > max_norm:
-        #         max_norm = norm
-        # print(f'MAX NORM = {max_norm}')
+        max_norm = 0
+        for name, param in model.named_parameters():
+            norm = param.grad.norm(2)
+            # print(name, norm)
+            if norm > max_norm:
+                max_norm = norm
+        print(f'MAX NORM = {max_norm}')
 
         # Update model
         optimizer.step()
