@@ -30,7 +30,7 @@ def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=False, **kwargs)
     return model
 
 
-def get_fasterrcnn_resnet50_fpn():
+def get_fasterrcnn_resnet50_fpn(weights_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     mean = [0.5244, 0.4904, 0.4781]
@@ -45,6 +45,9 @@ def get_fasterrcnn_resnet50_fpn():
                                     box_detections_per_img=1)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)
+
+    if weights_path:
+        model.load_state_dict(torch.load(weights_path)['state_dict'])
 
     return model.to(device)
 

@@ -263,7 +263,7 @@ def save_checkpoint(epoch, model):
     :param epoch: epoch number
     :param model: model
     """
-    filename = f'exp2_checkpoint_fasterrcnn_epoch={epoch + 1}.pth.tar'
+    filename = f'checkpoint_fasterrcnn_epoch={epoch + 1}.pth.tar'
     torch.save({'state_dict': model.state_dict()}, filename)
 
 

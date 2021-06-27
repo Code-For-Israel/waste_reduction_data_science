@@ -84,7 +84,7 @@ def main():
         metrics['test_accuracy'].append(test_mean_accuracy)
 
         # Save all the losses to pickled list
-        with open('exp2_metrics.pkl', 'wb') as f:
+        with open('metrics.pkl', 'wb') as f:
             pickle.dump(metrics, f)
 
         torch.cuda.empty_cache()
