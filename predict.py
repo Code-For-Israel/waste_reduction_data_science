@@ -30,13 +30,13 @@ weights_path = os.path.join(module_path, 'faster_rcnn.pth.tar')
 gdown.download(url, weights_path, quiet=False)
 
 print('Loading model ...')
-checkpoint = torch.load(weights_path)
 model = get_fasterrcnn_resnet50_fpn()
+checkpoint = torch.load(weights_path)
 model.load_state_dict(checkpoint['state_dict'])
 
 print('Loading data ...')
 dataset = MasksDataset(data_folder=args.input_folder, split='test')
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False,
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=5, shuffle=False,
                                          num_workers=1, pin_memory=False, collate_fn=collate_fn)
 
 # Evaluate model on given data
