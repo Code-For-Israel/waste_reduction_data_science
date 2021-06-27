@@ -65,6 +65,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
     if save_csv:
         results = pd.DataFrame(columns=['filename', 'x', 'y', 'w', 'h', 'proper_mask'])
         results.filename = filenames
+        predicted_boxes = [torch.stack(pred_box).cpu().numpy() for pred_box in predicted_boxes]
         results.x, results.y, results.w, results.h = zip(*predicted_boxes)
         results.proper_mask = predicted_labels
         results.to_csv(save_csv, index=False, header=True)
