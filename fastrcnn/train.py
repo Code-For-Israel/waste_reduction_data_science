@@ -154,13 +154,13 @@ def train(train_loader, model, optimizer, epoch):
         # if exploding gradients: TODO
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
         # printing gradients norms
-        max_norm = 0
-        for name, param in model.named_parameters():
-            norm = param.grad.norm(2)
-            # print(name, norm)
-            if norm > max_norm:
-                max_norm = norm
-        print(f'MAX NORM = {max_norm}')
+        # max_norm = 0
+        # for name, param in model.named_parameters():
+        #     norm = param.grad.norm(2)
+        #     # print(name, norm)
+        #     if norm > max_norm:
+        #         max_norm = norm
+        # print(f'MAX NORM = {max_norm}')
 
         # Update model
         optimizer.step()
@@ -177,7 +177,7 @@ def train(train_loader, model, optimizer, epoch):
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader),
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses_meter))
-    del loss_dict, losses, images, targets  # free some memory since their histories may be stored
+        del loss_dict, losses, images, targets  # free some memory since their histories may be stored
     torch.cuda.empty_cache()
     return losses_meter.avg
 
