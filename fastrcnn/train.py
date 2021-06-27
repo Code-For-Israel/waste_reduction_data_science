@@ -162,6 +162,8 @@ def train(train_loader, model, optimizer, epoch):
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader),
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses_meter))
+    del losses, images, targets  # free some memory since their histories may be stored
+    torch.cuda.empty_cache()
     return losses_meter.avg
 
 
