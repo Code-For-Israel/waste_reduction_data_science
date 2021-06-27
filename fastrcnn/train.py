@@ -1,6 +1,7 @@
 import time
 import torch.optim
 import torch.utils.data
+import torch.backends.cudnn as cudnn
 from dataset import MasksDataset
 from utils import AverageMeter, save_checkpoint
 import constants
@@ -11,7 +12,7 @@ from model import get_fasterrcnn_resnet50_fpn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 8  # batch size TODO
+batch_size = 50  # batch size TODO
 workers = 4  # number of workers for loading data in the DataLoader TODO
 print_freq = 20  # print training status every __ batches
 lr = 1e-3  # learning rate TODO
@@ -19,6 +20,7 @@ weight_decay = 0  # weight decay TODO 5e-4
 # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) -
 # you will recognize it by a sorting error in the MuliBox loss calculation
 grad_clip = None
+cudnn.benchmark = True
 
 
 def collate_fn(batch):
@@ -72,12 +74,12 @@ def main():
         train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
         print(f'Train IoU = {round(float(train_mean_iou), 4)}, Accuracy = {round(float(train_mean_accuracy), 4)}')
 
-        # Test loss
-        test_loss = get_test_loss(test_loader, model)
-
         # Evaluate test set
         test_mean_accuracy, test_mean_iou = evaluate(test_loader, model)
         print(f'Test IoU = {round(float(test_mean_iou), 4)}, Accuracy = {round(float(test_mean_accuracy), 4)}')
+
+        # Test loss
+        test_loss = get_test_loss(test_loader, model)
 
         # Populate dict
         metrics['train_loss'].append(train_loss)
@@ -186,9 +188,6 @@ test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4
 #       New one with Non-FrozenBN2d = 41132062 (requires_grad=False) / 41357406
 #       This added 53120 features (BN2d, unfreeze some layers in backbone)
 #  3. Random crop with only > 0.5 overlap (before it was accepted also 0., 0.1, 0.3)
-#  4. don't set min_size and max_size to FasterRCNN
-#  5. Filter train smaples with w <= 10 or h <= 10
-#  6. change min_size, max_size to their default
 
 
 # TODO detection mechanism

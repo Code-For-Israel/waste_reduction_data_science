@@ -44,11 +44,8 @@ def evaluate(loader, model, save_csv=False, verbose=False):
     filenames = loader.dataset.images
     imgs_orig_sizes = loader.dataset.sizes
 
-    # clamp to [min=0, max=224] all predicted boxes
-    predicted_boxes = [box.clamp(0., 224.) for box in all_images_boxes]
-
     # convert boxes back to their original sizes by the original width, height
-    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(predicted_boxes)]
+    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(all_images_boxes)]
 
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]

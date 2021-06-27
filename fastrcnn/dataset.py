@@ -32,7 +32,7 @@ class MasksDataset(Dataset):
             for path in self.images:
                 image_id, bbox, proper_mask = path.strip(".jpg").split("__")
                 x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
-                if w <= 10 or h <= 10:  # TODO possibly filter
+                if w <= 0 or h <= 0:  # TODO possibly filter
                     self.paths_to_exclude.append(path)
             self.images = [path for path in self.images if path not in self.paths_to_exclude]
 
@@ -86,7 +86,7 @@ class MasksDataset(Dataset):
 
         # non-fractional for Fast-RCNN
         image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
-        box = box.clamp(1e-8, 224.)
+        box = box.clamp(1., 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
