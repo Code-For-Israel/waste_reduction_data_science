@@ -28,9 +28,8 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                 scores = res[k].get("scores", None)
                 if boxes is not None and labels is not None and scores is not None \
                         and torch.numel(boxes) != 0 and torch.numel(labels) != 0 and torch.numel(scores) != 0:
-                    # TODO think of a better solution to the most_left need
-                    print(boxes[0])
                     # [xmin, ymin, xmax, ymax] non-fractional
+                    # Note: one box because our faster rcnn model defined with box_detections_per_img=1
                     all_images_boxes.append(boxes[0].to(device))
                     all_images_labels.append(labels[0].to(device))
                     all_images_scores.append(scores[0].to(device))
@@ -38,13 +37,14 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                     all_images_boxes.append(torch.FloatTensor([0., 0., 224., 224.]).to(device))
                     all_images_labels.append(torch.IntTensor([0]).to(device))
                     all_images_scores.append(torch.FloatTensor([0.]).to(device))
+            del images
 
     filenames = loader.dataset.images
     imgs_orig_sizes = loader.dataset.sizes
 
     # convert boxes back to their original sizes by the original width, height
     predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(all_images_boxes)]
-    print(predicted_boxes)  # TODO
+
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]
 
