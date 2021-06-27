@@ -1,4 +1,4 @@
-name: fast
+name: hw2_env
 channels:
   - nvidia
   - conda-forge
