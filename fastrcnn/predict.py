@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 mean = [0.5244, 0.4904, 0.4781]
 std = [0.2642, 0.2608, 0.2561]
 
-checkpoint = torch.load('/home/student/facemask_obj_detect/fastrcnn/checkpoint_fasterrcnn_epoch=2.pth.tar')  # TODO
+checkpoint = torch.load('/home/student/facemask_obj_detect/fastrcnn/checkpoint_fasterrcnn_epoch=8.pth.tar')  # TODO
 model = get_fasterrcnn_resnet50_fpn()
 model.load_state_dict(checkpoint['state_dict'])
 

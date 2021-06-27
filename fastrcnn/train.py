@@ -151,7 +151,7 @@ def train(train_loader, model, optimizer, epoch):
         optimizer.zero_grad()
         losses.backward()
 
-        # Clipping
+        # Clipping TODO maybe smaller max_norm? (2?)
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10, norm_type=2)
         # printing gradients norms
         # max_norm = 0
@@ -205,6 +205,8 @@ test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4
 #       New one with Non-FrozenBN2d = 41132062 (requires_grad=False) / 41357406
 #       This added 53120 features (BN2d, unfreeze some layers in backbone)
 #  3. Random crop with only > 0.5 overlap (before it was accepted also 0., 0.1, 0.3)
+#  4. box_detections_per_img=1
+#  5. grad clip
 
 
 # TODO detection mechanism
