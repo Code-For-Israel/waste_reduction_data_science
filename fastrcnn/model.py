@@ -45,7 +45,8 @@ def get_fasterrcnn_resnet50_fpn():
                                     image_mean=mean,
                                     image_std=std,
                                     min_size=224,
-                                    max_size=224)
+                                    max_size=224,
+                                    box_detections_per_img=1)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)
 

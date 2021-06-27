@@ -109,6 +109,8 @@ def get_test_loss(test_loader, model):
             losses = sum(loss for loss in loss_dict.values())
             loss_value = losses.item()
             losses_meter.update(loss_value, len(images))
+    del losses, images, targets  # free some memory since their histories may be stored
+    torch.cuda.empty_cache()
     return losses_meter.avg
 
 
@@ -146,6 +148,17 @@ def train(train_loader, model, optimizer, epoch):
         # Backward prop.
         optimizer.zero_grad()
         losses.backward()
+
+        # if exploding gradients: TODO
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=3, norm_type=2)
+        # printing gradients norms
+        max_norm = 0
+        for name, param in model.named_parameters():
+            norm = param.grad.norm(2)
+            # print(name, norm)
+            if norm > max_norm:
+                max_norm = norm
+        print(f'MAX NORM = {max_norm}')
 
         # Update model
         optimizer.step()
