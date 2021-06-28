@@ -7,7 +7,9 @@ import torch.backends.cudnn as cudnn
 from dataset import collate_fn
 import os
 import gdown
+import warnings
 
+warnings.filterwarnings("ignore")
 cudnn.benchmark = True
 
 # Parsing script arguments
