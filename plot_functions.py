@@ -75,30 +75,13 @@ def show_images_and_bboxes_from_predictions_df(path):
     df['iou'] = df.apply(lambda sample: calc_iou(sample.true_box, (sample.x, sample.y, sample.w, sample.h)), axis=1)
     df = df.sort_values(by=['iou'])
 
-    # import seaborn as sn
-
     confusion_matrix = pd.crosstab(df['true_label'], df['proper_mask'], rownames=['Actual'], colnames=['Predicted'])
-    plt.matshow(confusion_matrix.values)
-
-    alpha = ['False', 'True']
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(confusion_matrix.values, interpolation='nearest')
-    fig.colorbar(cax)
-
-    ax.set_xticklabels(['Predicted'] + alpha)
-    ax.set_yticklabels(['Actual'] + alpha)
-
-    plt.show()
-
-    print("hi")
-    sn.heatmap(confusion_matrix, annot=True)
-    plt.show()
+    print(confusion_matrix.values)
 
     plot_iou_hist(df)
     aux_plot_examples(df.head())
     aux_plot_examples(df.tail())
+
 
 def plot_iou_hist(df):
     ax = df.hist(column='iou', bins=20, grid=False, figsize=(12, 8), color='#86bf91', zorder=2,
@@ -133,6 +116,7 @@ def plot_iou_hist(df):
         # Format y-axis label
         x.yaxis.set_major_formatter(StrMethodFormatter('{x:,g}'))
     plt.show()
+
 
 def aux_plot_examples(df):
     for index, row in df.iterrows():
