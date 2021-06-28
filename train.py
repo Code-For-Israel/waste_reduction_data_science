@@ -13,7 +13,7 @@ from dataset import collate_fn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 42  # batch size
+batch_size = 20  # batch size (We trained with 42)
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 10  # print training status every __ batches
 lr = 1e-3  # learning rate
@@ -46,11 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    # Calculate total number of epochs to train and the epochs to decay learning rate at
-    # (i.e. convert iterations to epochs)
-    # To convert iterations to epochs, divide iterations by the number of iterations per epoch
-    # The paper trains for 120,000 iterations with a batch size of 32, decays after 80,000 and 100,000 iterations
-    epochs = 500
+    epochs = 60
     metrics = dict(train_loss=[], train_iou=[], train_accuracy=[],
                    test_loss=[], test_iou=[], test_accuracy=[])
     # Epochs
@@ -175,36 +171,6 @@ def train(train_loader, model, optimizer, epoch):
         del loss_dict, losses, images, targets  # free some memory since their histories may be stored
     torch.cuda.empty_cache()
     return losses_meter.avg
-
-
-# TODO EXP-1 commit:
-#  https://github.com/yotammarton/facemask_obj_detect/tree/0da6c19dad696ce810fd3274cd26a1c539717681
-#  METRICS:
-"""
-train_loss [3.9092, 0.2825, 0.2548, 0.2512, 0.2414, 0.2338, 0.4992, 0.301, 0.2705, 0.262, 0.2631, 0.2562, 0.2468, 0.2428, 0.2394, 0.2332, 0.2268, 0.2215, 0.2146, 0.2156, 0.213, 0.2112, 0.2101, 0.2081, 0.2075, 0.2045, 0.2061, 0.2032, 0.2002, 0.2051, 0.2012, 0.1944, 0.1977, 0.197, 0.1912, 0.1943, 0.1984, 0.1948, 0.1946, 0.1942, 0.1951, 0.1927, 0.1955, 0.1932, 0.1943, 0.1921, 0.1849]
-train_iou [0.1205, 0.1303, 0.1515, 0.2202, 0.2568, 0.262, 0.0706, 0.1072, 0.1164, 0.1081, 0.1644, 0.2318, 0.2363, 0.2262, 0.2762, 0.2928, 0.3189, 0.2893, 0.3965, 0.3423, 0.4274, 0.337, 0.4017, 0.3692, 0.3914, 0.4493, 0.4309, 0.392, 0.376, 0.4493, 0.3996, 0.3359, 0.4671, 0.4174, 0.403, 0.4542, 0.4351, 0.3912, 0.439, 0.4227, 0.4554, 0.4893, 0.413, 0.446, 0.3844, 0.3688, 0.4519]
-train_accuracy [0.5337, 0.5412, 0.5293, 0.5406, 0.5514, 0.5525, 0.4807, 0.5128, 0.5125, 0.4964, 0.5304, 0.5026, 0.5293, 0.5352, 0.5444, 0.5474, 0.553, 0.5555, 0.5493, 0.5474, 0.5713, 0.5574, 0.5759, 0.5734, 0.5822, 0.5396, 0.5822, 0.5704, 0.5662, 0.6242, 0.5342, 0.5581, 0.5691, 0.6068, 0.5768, 0.5454, 0.5828, 0.5778, 0.5661, 0.5654, 0.5538, 0.6191, 0.6051, 0.5867, 0.5619, 0.5988, 0.5644]
-test_loss [0.2912, 0.2641, 0.2607, 0.2306, 0.2291, 0.2707, 0.4736, 0.2763, 0.2956, 0.2955, 0.2815, 0.2594, 0.2506, 0.2495, 0.2503, 0.2371, 0.2346, 0.225, 0.2273, 0.218, 0.2159, 0.2205, 0.2157, 0.2195, 0.1993, 0.2171, 0.2118, 0.2145, 0.1897, 0.2156, 0.1842, 0.223, 0.1859, 0.1881, 0.2121, 0.232, 0.2113, 0.2259, 0.2041, 0.1857, 0.1931, 0.1886, 0.2053, 0.1883, 0.1957, 0.2093, 0.2205]
-test_iou [0.1223, 0.129, 0.1505, 0.2245, 0.2592, 0.2637, 0.0697, 0.1091, 0.1157, 0.1071, 0.1641, 0.2336, 0.2352, 0.2276, 0.2761, 0.2976, 0.3217, 0.2955, 0.4022, 0.3388, 0.429, 0.3335, 0.3998, 0.37, 0.395, 0.4507, 0.4331, 0.3871, 0.3757, 0.4495, 0.4019, 0.3396, 0.4649, 0.42, 0.4015, 0.4555, 0.4294, 0.3888, 0.4357, 0.4168, 0.4539, 0.4871, 0.4182, 0.4444, 0.3802, 0.3649, 0.4503]
-test_accuracy [0.5325, 0.541, 0.5305, 0.544, 0.5397, 0.5592, 0.4738, 0.5085, 0.4948, 0.4822, 0.5262, 0.5242, 0.53, 0.5342, 0.5438, 0.5505, 0.5498, 0.554, 0.5585, 0.5472, 0.5608, 0.5535, 0.5702, 0.569, 0.5858, 0.538, 0.586, 0.5795, 0.5712, 0.635, 0.5317, 0.562, 0.571, 0.5988, 0.5765, 0.535, 0.5588, 0.588, 0.5695, 0.5725, 0.556, 0.6158, 0.5972, 0.585, 0.566, 0.5955, 0.5618]
-"""
-
-# TODO EXP-2 changes:
-#  1. Make all augmentations with probability 0.5 (each), no augmentations at all with probability = 0.2+1/16
-#  2. Faster-RCNN original #parameters = 41304286 >>
-#       New one with Non-FrozenBN2d = 41132062 (requires_grad=False) / 41357406
-#       This added 53120 features (BN2d, unfreeze some layers in backbone)
-#  3. Random crop with only > 0.5 overlap (before it was accepted also 0., 0.1, 0.3)
-#  4. box_detections_per_img=1
-#  5. grad clip
-#  6. take the box with the max score during inference phase
-
-# TODO YOTAM:
-#  1. Train model with new clip
-#  2. Prepare graphs - exp 2a 2b
-#  3. Upload final checkpoint to google cloud
-#  4. Arrange code repo
-#  5. Calculate mean iou, accuracy based on .csv only
 
 
 if __name__ == '__main__':

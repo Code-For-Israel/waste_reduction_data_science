@@ -33,6 +33,7 @@ def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=False, **kwargs)
 def get_fasterrcnn_resnet50_fpn(weights_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # MasksDataset mean and std
     mean = [0.5244, 0.4904, 0.4781]
     std = [0.2642, 0.2608, 0.2561]
 

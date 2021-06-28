@@ -52,6 +52,7 @@ class MasksDataset(Dataset):
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
+        # MasksDataset mean
         mean = [0.5244, 0.4904, 0.4781]
 
         # MaskDataset train set mean and std
@@ -112,6 +113,8 @@ class MasksDataset(Dataset):
         x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
 
         # it is promised that test set will not include non-positive w,h
+        # Note: this is here only for calculating the test loss (and not relevant for the inference phase
+        # because we don't use boxes in the inference phases, but take them from the filenames)
         if (w <= 0 or h <= 0) and self.split == 'TEST':
             w = 1 if w <= 0 else w
             h = 1 if h <= 0 else h

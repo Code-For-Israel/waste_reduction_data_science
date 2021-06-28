@@ -15,5 +15,3 @@ dependencies:
       - pandas==1.2.5
       - opencv-python==4.5.2.54
       - matplotlib==3.4.2
-
-# TODO make sure that works on course server

@@ -79,7 +79,6 @@ def show_images_and_bboxes_from_predictions_df(path):
 
 def aux_plot_examples(df):
     for index, row in df.iterrows():
-
         # Load image
         im = cv2.imread(os.path.join(image_dir, row.filename))
         # BGR to RGB
@@ -115,7 +114,7 @@ def random_bbox_predict(bbox):
     return [x + np.random.randint(-15, 15) for x in bbox]
 
 
-def plot_one_metric(train_list, test_list, metric):
+def plot_one_metric(train_list, test_list, metric, mark_epoch=None):
     """
     Plot graph with train and test results.
     :param train_list: train results values.
@@ -124,19 +123,25 @@ def plot_one_metric(train_list, test_list, metric):
     :return: None.
     """
     indices_list = [(1 + i) for i in range(len(train_list))]
+    plt.figure(figsize=(12, 2))
     plt.plot(indices_list, train_list, '-', c="tab:blue", label=f'Train {metric}')
     plt.plot(indices_list, test_list, '-', c="tab:orange", label=f'Test {metric}')
 
     plt.plot(indices_list, train_list, 'o', color='tab:blue', markersize=4)
     plt.plot(indices_list, test_list, 'o', color='tab:orange', markersize=4)
-    plt.xticks(np.arange(1, len(indices_list) + 1, step=1))
+
+    # Mark the chosen epoch
+    if mark_epoch:
+        plt.plot([mark_epoch], train_list[mark_epoch - 1], 'o', color='tab:red', markersize=6)
+        plt.plot([mark_epoch], test_list[mark_epoch - 1], 'o', color='tab:red', markersize=6)
+
+    plt.xticks(np.arange(1, len(indices_list) + 1, step=1), fontsize=10, rotation=90)
     plt.grid(linewidth=1)
     plt.title(f'Train and test {metric} values along epochs')
     plt.xlabel("Epochs")
     plt.ylabel(f'{metric}')
-    plt.legend(loc='lower right')
+    plt.legend(loc='lower right' if metric != 'loss' else 'upper right')
     plt.show()
-
 
 
 if __name__ == "__main__":
@@ -149,5 +154,11 @@ if __name__ == "__main__":
     # show_images_and_bboxes_from_predictions_df(predictions_path)
 
     # plot the metrics graphs
-    plot_one_metric([0,1,2], [4,5,7], 'loss')
+    plot_one_metric(train_list=[0, 1, 2], test_list=[4, 5, 7], metric='loss')
+    import pickle
 
+    exp1_metrics = pickle.load(open('exp1 metrics.pkl.txt', 'rb'))
+    plot_one_metric(train_list=exp1_metrics['train_loss'], test_list=exp1_metrics['test_loss'], metric='loss')
+    plot_one_metric(train_list=exp1_metrics['train_iou'], test_list=exp1_metrics['test_iou'], metric='iou')
+    plot_one_metric(train_list=exp1_metrics['train_accuracy'], test_list=exp1_metrics['test_accuracy'],
+                    metric='accuracy')

@@ -2,12 +2,26 @@ import torch
 import torchvision.transforms.functional as FT
 import random
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# Label map
-masks_labels = ('proper', 'not_porper')
-label_map = {k: v + 1 for v, k in enumerate(masks_labels)}
-label_map['background'] = 0
-rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
+
+def calc_iou(bbox_a, bbox_b):
+    """
+    Calculate intersection over union (IoU) between two bounding boxes with a (x, y, w, h) format.
+    :param bbox_a: Bounding box A. 4-tuple/list.
+    :param bbox_b: Bounding box B. 4-tuple/list.
+    :return: Intersection over union (IoU) between bbox_a and bbox_b, between 0 and 1.
+    """
+    x1, y1, w1, h1 = bbox_a
+    x2, y2, w2, h2 = bbox_b
+    w_intersection = min(x1 + w1, x2 + w2) - max(x1, x2)
+    h_intersection = min(y1 + h1, y2 + h2) - max(y1, y2)
+    if w_intersection <= 0.0 or h_intersection <= 0.0:  # No overlap
+        return 0.0
+    intersection = w_intersection * h_intersection
+    union = w1 * h1 + w2 * h2 - intersection  # Union = Total Area - Intersection
+    return intersection / union
+
+
+"""Below function from: https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection/blob/master/utils.py"""
 
 
 def find_jaccard_overlap(set_1, set_2):
@@ -47,24 +61,6 @@ def find_intersection(set_1, set_2):
     upper_bounds = torch.min(set_1[:, 2:].unsqueeze(1), set_2[:, 2:].unsqueeze(0))  # (n1, n2, 2)
     intersection_dims = torch.clamp(upper_bounds - lower_bounds, min=0)  # (n1, n2, 2)
     return intersection_dims[:, :, 0] * intersection_dims[:, :, 1]  # (n1, n2)
-
-
-def calc_iou(bbox_a, bbox_b):
-    """
-    Calculate intersection over union (IoU) between two bounding boxes with a (x, y, w, h) format.
-    :param bbox_a: Bounding box A. 4-tuple/list.
-    :param bbox_b: Bounding box B. 4-tuple/list.
-    :return: Intersection over union (IoU) between bbox_a and bbox_b, between 0 and 1.
-    """
-    x1, y1, w1, h1 = bbox_a
-    x2, y2, w2, h2 = bbox_b
-    w_intersection = min(x1 + w1, x2 + w2) - max(x1, x2)
-    h_intersection = min(y1 + h1, y2 + h2) - max(y1, y2)
-    if w_intersection <= 0.0 or h_intersection <= 0.0:  # No overlap
-        return 0.0
-    intersection = w_intersection * h_intersection
-    union = w1 * h1 + w2 * h2 - intersection  # Union = Total Area - Intersection
-    return intersection / union
 
 
 def photometric_distort(image):
