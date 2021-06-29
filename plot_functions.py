@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib import patches
 from utils import calc_iou
+from matplotlib.ticker import StrMethodFormatter
 
 np.random.seed(42)
 image_dir = "/home/student/test"
@@ -73,8 +74,48 @@ def show_images_and_bboxes_from_predictions_df(path):
     df['true_label'] = df['filename'].apply(lambda x: x.split('__')[2][:-4])
     df['iou'] = df.apply(lambda sample: calc_iou(sample.true_box, (sample.x, sample.y, sample.w, sample.h)), axis=1)
     df = df.sort_values(by=['iou'])
+
+    confusion_matrix = pd.crosstab(df['true_label'], df['proper_mask'], rownames=['Actual'], colnames=['Predicted'])
+    print(confusion_matrix.values)
+
+    plot_iou_hist(df)
     aux_plot_examples(df.head())
     aux_plot_examples(df.tail())
+
+
+def plot_iou_hist(df):
+    ax = df.hist(column='iou', bins=20, grid=False, figsize=(12, 8), color='#86bf91', zorder=2,
+                 rwidth=0.9)
+
+    ax = ax[0]
+    for x in ax:
+
+        # Despine
+        x.spines['right'].set_visible(False)
+        x.spines['top'].set_visible(False)
+        x.spines['left'].set_visible(False)
+
+        # Switch off ticks
+        x.tick_params(bottom="off", top="off", labelbottom="on", left="off", right="off",
+                      labelleft="on")
+
+        # Draw horizontal axis lines
+        vals = x.get_yticks()
+        for tick in vals:
+            x.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
+
+        # Remove title
+        x.set_title("IOU Histogram")
+
+        # Set x-axis label
+        x.set_xlabel("IOU", labelpad=20, weight='bold', size=12)
+
+        # Set y-axis label
+        x.set_ylabel("Frequency", labelpad=20, weight='bold', size=12)
+
+        # Format y-axis label
+        x.yaxis.set_major_formatter(StrMethodFormatter('{x:,g}'))
+    plt.show()
 
 
 def aux_plot_examples(df):
@@ -150,15 +191,15 @@ if __name__ == "__main__":
     # show_images_and_bboxes(data, image_dir)
 
     # plot sample of predicted BBs along the true ones
-    # predictions_path = '/tmp/pycharm_project_388/prediction.csv'
-    # show_images_and_bboxes_from_predictions_df(predictions_path)
+    predictions_path = '/tmp/pycharm_project_388/prediction.csv'
+    show_images_and_bboxes_from_predictions_df(predictions_path)
 
     # plot the metrics graphs
-    plot_one_metric(train_list=[0, 1, 2], test_list=[4, 5, 7], metric='loss')
-    import pickle
-
-    exp1_metrics = pickle.load(open('exp1 metrics.pkl.txt', 'rb'))
-    plot_one_metric(train_list=exp1_metrics['train_loss'], test_list=exp1_metrics['test_loss'], metric='loss')
-    plot_one_metric(train_list=exp1_metrics['train_iou'], test_list=exp1_metrics['test_iou'], metric='iou')
-    plot_one_metric(train_list=exp1_metrics['train_accuracy'], test_list=exp1_metrics['test_accuracy'],
-                    metric='accuracy')
+    # plot_one_metric(train_list=[0, 1, 2], test_list=[4, 5, 7], metric='loss')
+    # import pickle
+    #
+    # exp1_metrics = pickle.load(open('exp1 metrics.pkl.txt', 'rb'))
+    # plot_one_metric(train_list=exp1_metrics['train_loss'], test_list=exp1_metrics['test_loss'], metric='loss')
+    # plot_one_metric(train_list=exp1_metrics['train_iou'], test_list=exp1_metrics['test_iou'], metric='iou')
+    # plot_one_metric(train_list=exp1_metrics['train_accuracy'], test_list=exp1_metrics['test_accuracy'],
+    #                 metric='accuracy')
