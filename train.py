@@ -13,7 +13,7 @@ from dataset import collate_fn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 20  # batch size (We trained with 42)
+batch_size = 42  # batch size (We trained with 42)
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 10  # print training status every __ batches
 lr = 1e-3  # learning rate
@@ -46,9 +46,9 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 60
+    epochs = 100  # TODO
     metrics = dict(train_loss=[], train_iou=[], train_accuracy=[],
-                   test_loss=[], test_iou=[], test_accuracy=[])
+                   test_iou=[], test_accuracy=[])
     # Epochs
     for epoch in range(epochs):
         # One epoch's training
@@ -68,14 +68,10 @@ def main():
         test_mean_accuracy, test_mean_iou = evaluate(test_loader, model)
         print(f'Test IoU = {round(float(test_mean_iou), 4)}, Accuracy = {round(float(test_mean_accuracy), 4)}')
 
-        # Test loss
-        test_loss = get_test_loss(test_loader, model)
-
         # Populate dict
         metrics['train_loss'].append(train_loss)
         metrics['train_iou'].append(train_mean_iou)
         metrics['train_accuracy'].append(train_mean_accuracy)
-        metrics['test_loss'].append(test_loss)
         metrics['test_iou'].append(test_mean_iou)
         metrics['test_accuracy'].append(test_mean_accuracy)
 
