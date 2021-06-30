@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print('Downloading model weights ...')
 module_path = os.path.dirname(os.path.realpath(__file__))
-gdrive_file_id = '1j3DDhos-WG-R_--pY_428c0CR9L3W9Nt'
+gdrive_file_id = '19wM9Bm16SnTvjsxVU6uOdZQrdWIUd4LS'
 
 url = f'https://drive.google.com/uc?id={gdrive_file_id}'
 weights_path = os.path.join(module_path, 'faster_rcnn.pth.tar')

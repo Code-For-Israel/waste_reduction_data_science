@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 100  # TODO
+    epochs = 100
     metrics = dict(train_loss=[], train_iou=[], train_accuracy=[],
                    test_iou=[], test_accuracy=[])
     # Epochs
@@ -80,26 +80,6 @@ def main():
             pickle.dump(metrics, f)
 
         torch.cuda.empty_cache()
-
-
-def get_test_loss(test_loader, model):
-    losses_meter = AverageMeter()  # loss
-    model.train()
-    with torch.no_grad():
-        for i, (images, targets) in enumerate(test_loader):
-            images = [image.to(device) for image in images]
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-            # Forward prop
-            loss_dict = model(images, targets)
-
-            # Loss
-            losses = sum(loss for loss in loss_dict.values())
-            loss_value = losses.item()
-            losses_meter.update(loss_value, len(images))
-    del loss_dict, losses, images, targets  # free some memory since their histories may be stored
-    torch.cuda.empty_cache()
-    return losses_meter.avg
 
 
 def train(train_loader, model, optimizer, epoch):
