@@ -6,6 +6,10 @@ from torchvision.models.detection.backbone_utils import BackboneWithFPN
 from torchvision.models.detection.faster_rcnn import FasterRCNN
 
 
+# TODO
+#   Use fasterrcnn_resnet50_fpn_v2
+#   Maybe consider https://rwightman.github.io/pytorch-image-models/models/inception-resnet-v2/
+
 def resnet_fpn_backbone(backbone_name, pretrained):
     backbone = resnet.__dict__[backbone_name](
         pretrained=pretrained,
@@ -33,7 +37,7 @@ def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=False, **kwargs)
 def get_fasterrcnn_resnet50_fpn(weights_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # MasksDataset mean and std
+    # TrucksDataset mean and std
     mean = [0.5244, 0.4904, 0.4781]
     std = [0.2642, 0.2608, 0.2561]
 
@@ -45,7 +49,7 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
                                     max_size=224,
                                     box_detections_per_img=1)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=3)  # classes + 1 (background)
 
     if weights_path:
         model.load_state_dict(torch.load(weights_path)['state_dict'])

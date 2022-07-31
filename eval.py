@@ -39,7 +39,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                     all_images_scores.append(torch.FloatTensor([0.]).to(device))
             del images, res, boxes, labels, scores
 
-    filenames = loader.dataset.images
+    filenames = loader.dataset.filenames
     imgs_orig_sizes = loader.dataset.sizes
 
     # convert boxes back to their original sizes by the original width, height

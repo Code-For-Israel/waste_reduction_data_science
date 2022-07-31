@@ -2,7 +2,7 @@ import time
 import torch.optim
 import torch.utils.data
 import torch.backends.cudnn as cudnn
-from dataset import MasksDataset
+from dataset import TrucksDataset
 from utils import AverageMeter, save_checkpoint
 import constants
 import pickle
@@ -33,15 +33,15 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Custom dataloaders
-    train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    train_dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers, pin_memory=True, collate_fn=collate_fn)
-    test_dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
+    test_dataset = TrucksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
                                               num_workers=workers, pin_memory=True, collate_fn=collate_fn)
 
     # set split = test to avoid augmentations
-    unshuffled_train_dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')
+    unshuffled_train_dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')
     unshuffled_train_loader = torch.utils.data.DataLoader(unshuffled_train_dataset, batch_size=batch_size,
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)

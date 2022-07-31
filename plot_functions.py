@@ -8,14 +8,16 @@ from matplotlib import patches
 from utils import calc_iou
 from matplotlib.ticker import StrMethodFormatter
 
+# TODO Find better way with utils.py from sgrvinod repo
+
 np.random.seed(42)
 image_dir = "/home/student/test"
 
 
 def parse_images_and_bboxes(image_dir):
     """
-    Parse a directory with images.
-    :param image_dir: Path to directory with images.
+    Parse a directory with filenames.
+    :param image_dir: Path to directory with filenames.
     :return: A list with (filename, image_id, bbox, proper_mask) for every image in the image_dir.
     """
     example_filenames = os.listdir(image_dir)
@@ -30,9 +32,9 @@ def parse_images_and_bboxes(image_dir):
 
 def show_images_and_bboxes(data, image_dir):
     """
-    Plot images with bounding boxes. Predicts random bounding boxes and computes IoU.
+    Plot filenames with bounding boxes. Predicts random bounding boxes and computes IoU.
     :param data: Iterable with (filename, image_id, bbox, proper_mask) structure.
-    :param image_dir: Path to directory with images.
+    :param image_dir: Path to directory with filenames.
     :return: None
     """
     for filename, image_id, bbox, proper_mask in data:
@@ -64,9 +66,8 @@ def show_images_and_bboxes(data, image_dir):
 
 def show_images_and_bboxes_from_predictions_df(path):
     """
-    Plot images with bounding boxes. Predicts random bounding boxes and computes IoU.
-    :param path: path to final predictions.csv file, after evaluation of a modele
-    :param image_dir: Path to directory with images.
+    Plot filenames with bounding boxes. Predicts random bounding boxes and computes IoU.
+    :param path: path to final predictions.csv file, after evaluation of a model
     :return: None
     """
     df = pd.read_csv(path)
@@ -145,16 +146,6 @@ def aux_plot_examples(df):
         plt.show()
 
 
-def random_bbox_predict(bbox):
-    """
-    Randomly predicts a bounding box given a ground truth bounding box.
-    For example purposes only.
-    :param bbox: Iterable with numbers.
-    :return: Random bounding box, relative to the input bbox.
-    """
-    return [x + np.random.randint(-15, 15) for x in bbox]
-
-
 def plot_one_metric(train_list, test_list, metric, mark_epoch=None):
     """
     Plot graph with train and test results.
@@ -186,7 +177,7 @@ def plot_one_metric(train_list, test_list, metric, mark_epoch=None):
 
 
 if __name__ == "__main__":
-    # plot example images
+    # plot example filenames
     # data = parse_images_and_bboxes(image_dir)
     # show_images_and_bboxes(data, image_dir)
 

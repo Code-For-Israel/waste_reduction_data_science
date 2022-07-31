@@ -1,4 +1,4 @@
-name: hw2_env
+name: obj_det
 channels:
   - nvidia
   - conda-forge

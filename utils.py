@@ -133,6 +133,16 @@ def expand(image, boxes, filler):
     return new_image, new_boxes
 
 
+def cxcy_to_xy(cxcy):
+    """
+    Convert bounding boxes from center-size coordinates (c_x, c_y, w, h) to boundary coordinates (x_min, y_min, x_max, y_max).
+    :param cxcy: bounding boxes in center-size coordinates, a tensor of size (n_boxes, 4)
+    :return: bounding boxes in boundary coordinates, a tensor of size (n_boxes, 4)
+    """
+    return torch.cat([cxcy[:, :2] - (cxcy[:, 2:] / 2),  # x_min, y_min
+                      cxcy[:, :2] + (cxcy[:, 2:] / 2)], 1)  # x_max, y_max
+
+
 def random_crop(image, boxes, labels):
     """
     Performs a random crop in the manner stated in the paper. Helps to learn to detect larger and partial objects.

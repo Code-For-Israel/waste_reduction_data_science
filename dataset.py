@@ -1,5 +1,5 @@
+from typing import Tuple
 from torch.utils.data import Dataset
-import json
 import os
 from PIL import Image
 from utils import *
@@ -13,53 +13,47 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-class MasksDataset(Dataset):
+class TrucksDataset(Dataset):
     """
-    call example: MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    call example: TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     """
 
-    def __init__(self, data_folder, split):
+    def __init__(self, data_folder: str, split: str):
         self.split = split.upper()
         assert self.split in {'TRAIN', 'TEST'}
 
-        self.data_folder = data_folder
+        self.data_folder = data_folder  # Absolute path to directory with .jpg and .txt files
 
         # Read data file names
-        self.images = sorted(os.listdir(data_folder))
-        if self.split == 'TRAIN':
-            # exclude problematic images with width or heigh equal to 0
-            self.paths_to_exclude = []
-            for path in self.images:
-                image_id, bbox, proper_mask = path.strip(".jpg").split("__")
-                x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
-                if w <= 0 or h <= 0:
-                    self.paths_to_exclude.append(path)
-            self.images = [path for path in self.images if path not in self.paths_to_exclude]
+        # self.filenames = ['img00010000351_06_02_2022T15_16_52', 'img00010000352_06_02_2022T15_29_06', ...]
+        self.filenames = [filename for filename in sorted(os.listdir(data_folder)) if
+                          '.txt' in filename or '.jpg' in filename]
+        self.filenames = sorted(set([filename.replace('.txt', '').replace('.jpg', '') for filename in self.filenames]))
 
         # Load data to RAM using multiprocess
-        self.loaded_imgs = []
+        self.data = []
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.load_single_img, path) for path in self.images]
-            self.loaded_imgs = [fut.result() for fut in futures]
-        self.loaded_imgs = sorted(self.loaded_imgs, key=lambda x: x[0])  # sort the images to reproduce results
-        print(f"Finished loading {self.split} set to memory - total of {len(self.loaded_imgs)} images")
+            futures = [executor.submit(self.load_single_img_and_data, filename) for filename in self.filenames]
+            self.data = [fut.result() for fut in futures]
+        self.data = sorted(self.data, key=lambda x: x[0])  # sort the filenames to reproduce results
+        print(f"Finished loading {self.split} set to memory - total of {len(self.data)} images")
 
-        # Store images sizes
+        # Store filenames sizes
         self.sizes = []
-        for path in self.images:
-            image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
+        for filename_without_extension, image, boxes, labels in self.data:
             self.sizes.append(torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0))
 
     def __getitem__(self, i):
-        # MasksDataset mean
+        # TrucksDataset mean
         mean = [0.5244, 0.4904, 0.4781]
 
         # MaskDataset train set mean and std
-        image_id, image, box, label = self.loaded_imgs[i]  # str, PIL, tensor, tensor
+        filename_without_extension, image, boxes, labels = self.data[i]  # str, PIL, tensor, tensor
+        image_id = int(filename_without_extension.split('_')[0].replace('img', ''))
 
         # Apply transformations and augmentations
-        image, box, label = image.copy(), box.clone(), label.clone()
+        image, boxes, labels = image.copy(), boxes.clone(), labels.clone()
         if self.split == 'TRAIN':
             if random.random() < 0.8:  # with probability of 80% try augmentations
                 # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
@@ -72,72 +66,86 @@ class MasksDataset(Dataset):
                 # Expand image (zoom out) with a 50% chance - helpful for training detection of small objects
                 # Fill surrounding space with the mean
                 if random.random() < 0.5:
-                    image, box = expand(image, box, filler=mean)
+                    image, boxes = expand(image, boxes, filler=mean)
 
                 # Randomly crop image (zoom in)
                 if random.random() < 0.5:
-                    image, box, label = random_crop(image, box, label)
+                    image, boxes, labels = random_crop(image, boxes, labels)
 
                 # Convert Torch tensor to PIL image
                 image = FT.to_pil_image(image)
 
                 # Flip image with a 50% chance
                 if random.random() < 0.5:
-                    image, box = flip(image, box)
+                    image, boxes = flip(image, boxes)
 
         # non-fractional for Fast-RCNN
-        image, box = resize(image, box, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
-        box = box.clamp(0., 224.)
+        image, boxes = resize(image, boxes, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
+        boxes = boxes.clamp(0., 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
 
         # No normalize for Fast-RCNN
 
-        area = (box[:, 3] - box[:, 1]) * (box[:, 2] - box[:, 0])
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         area = torch.as_tensor(area, dtype=torch.float32)
 
-        target = dict(boxes=box,
-                      labels=label,
+        target = dict(boxes=boxes,
+                      labels=labels,
                       image_id=torch.tensor([torch.tensor(int(image_id))]),
                       area=area,
-                      iscrowd=torch.zeros_like(label, dtype=torch.int64))
+                      iscrowd=torch.zeros_like(labels, dtype=torch.int64))
 
         return image, target  # image is a tensor in [0, 1] (aka pixels divided by 255)
 
     def __len__(self):
-        return len(self.images)
+        return len(self.data)
 
-    def load_single_img(self, path):
-        image_id, bbox, proper_mask = path.strip(".jpg").split("__")
-        x_min, y_min, w, h = json.loads(bbox)  # convert string bbox to list of integers
+    def extract_bboxes_and_labels_from_annotations_txt(self, annotations_path) -> Tuple:
+        """
+        annotations_path: str, path to yolo1.1 like annotations txt file
+        with each row as "label center_x center_y width height" e.g.
+        3 0.628125 0.8166666666666667 0.115625 0.3
 
-        # it is promised that test set will not include non-positive w,h
-        # Note: this is here only for calculating the test loss (and not relevant for the inference phase
-        # because we don't use boxes in the inference phases, but take them from the filenames)
-        if (w <= 0 or h <= 0) and self.split == 'TEST':
-            w = 1 if w <= 0 else w
-            h = 1 if h <= 0 else h
+        return tuple of two lists
+        """
+        boxes, labels = list(), list()
+        annotations = [row.strip().split(' ') for row in
+                       open(os.path.join(self.data_folder, annotations_path)).readlines()]
+        for annotation in annotations:
+            label, center_x, center_y, width, height = annotation
+            label = int(label)
+            center_x, center_y, width, height = float(center_x), float(center_y), float(width), float(height)
+            labels.append(label)
+            boxes.append([center_x, center_y, width, height])
 
-        bbox = [x_min, y_min, x_min + w, y_min + h]  # [x_min, y_min, x_max, y_max]
-        proper_mask = [1] if proper_mask.lower() == "true" else [2]
+        return boxes, labels
+
+    def load_single_img_and_data(self, filename_without_extension: str):
+        assert '.txt' not in filename_without_extension and '.jpg' not in filename_without_extension
+        image_path = filename_without_extension + '.jpg'
+        annotations_path = filename_without_extension + '.txt'
+
+        boxes, labels = self.extract_bboxes_and_labels_from_annotations_txt(annotations_path)
+
+        boxes = torch.FloatTensor(boxes)  # shape (n_boxes, 4), each box is [center_x, center_y, width, height]
+        boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is
+        labels = torch.LongTensor(labels)  # shape (n_boxes)
 
         # Read image
-        image = Image.open(os.path.join(self.data_folder, path), mode='r').convert('RGB')
+        image = Image.open(os.path.join(self.data_folder, image_path), mode='r').convert('RGB')
 
-        box = torch.FloatTensor([bbox])  # (1, 4)
-        label = torch.LongTensor(proper_mask)  # (1)
-
-        return image_id, image, box, label  # str, PIL, tensor, tensor
+        return filename_without_extension, image, boxes, labels  # str, PIL, tensor, tensor
 
 
 if __name__ == '__main__':
-    # check MasksDataset class
+    # check TrucksDataset class
     # train
-    dataset = MasksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True, collate_fn=collate_fn)
     images, targets = next(iter(train_loader))
 
     # test
-    dataset = MasksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
+    dataset = TrucksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)

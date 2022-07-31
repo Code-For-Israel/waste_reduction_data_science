@@ -1,6 +1,6 @@
 import argparse
 import torch.utils.data
-from dataset import MasksDataset
+from dataset import TrucksDataset
 from model import get_fasterrcnn_resnet50_fpn
 from eval import evaluate
 import torch.backends.cudnn as cudnn
@@ -14,7 +14,7 @@ cudnn.benchmark = True
 
 # Parsing script arguments
 parser = argparse.ArgumentParser(description='Process input')
-parser.add_argument('input_folder', type=str, help='Input folder path, containing images')
+parser.add_argument('input_folder', type=str, help='Input folder path, containing filenames')
 args = parser.parse_args()
 
 # Define device and checkpoint path
@@ -32,7 +32,7 @@ print('Loading model ...')
 model = get_fasterrcnn_resnet50_fpn(weights_path=weights_path)
 
 print('Loading data ...')
-dataset = MasksDataset(data_folder=args.input_folder, split='test')
+dataset = TrucksDataset(data_folder=args.input_folder, split='test')
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)
 
 # Evaluate model on given data
