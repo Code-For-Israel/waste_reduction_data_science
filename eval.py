@@ -9,9 +9,12 @@ import os
 def evaluate(loader, model, save_csv=False, verbose=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    detected_images_boxes = list()
-    detected_images_labels = list()
-    detected_images_scores = list()
+    detected_boxes = list()
+    detected_labels = list()
+    detected_scores = list()
+    true_boxes = list()
+    true_labels = list()
+    true_difficulties = list()
 
     model.eval()
     with torch.no_grad():
@@ -24,27 +27,32 @@ def evaluate(loader, model, save_csv=False, verbose=False):
             res = model(images)
 
             for k in range(len(images)):
-                boxes = res[k].get("boxes", None)
-                labels = res[k].get("labels", None)
-                scores = res[k].get("scores", None)
+                det_boxes = res[k].get("boxes", None)
+                det_labels = res[k].get("labels", None)
+                det_scores = res[k].get("scores", None)
                 # TODO What happens if one of them is None?
 
-                detected_images_boxes.append(boxes)
-                detected_images_labels.append(labels)
-                detected_images_scores.append(scores)
+                detected_boxes.append(det_boxes)
+                detected_labels.append(det_labels)
+                detected_scores.append(det_scores)
+                true_boxes.append(targets[k]['boxes'])
+                true_labels.append(targets[k]['labels'])
+                true_difficulties.append(torch.zeros_like(targets[k]['labels']))  # made up for using `calculate_mAP()`
 
-            del images, res, boxes, labels, scores
+            del images, res, det_boxes, det_labels, det_scores
+
+    # TODO Continue going from here below, make sure calculate_mAP works
 
     filenames = loader.dataset.filenames
     imgs_orig_sizes = loader.dataset.sizes
 
     # convert boxes back to their original sizes by the original width, height
-    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(detected_images_boxes)]
+    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(detected_boxes)]
 
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]
 
-    predicted_labels = ['True' if label == 1 else 'False' for label in detected_images_labels]
+    predicted_labels = ['True' if label == 1 else 'False' for label in detected_labels]
 
     # take true boxes from the filenames with format [x_min, y_min, w, h]
     true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
@@ -67,7 +75,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         results.to_csv(save_csv, index=False, header=True)
         print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
 
-    del predicted_boxes, detected_images_boxes, detected_images_labels, detected_images_scores
+    del predicted_boxes, detected_boxes, detected_labels, detected_scores
     torch.cuda.empty_cache()
 
     return mean_accuracy, mean_iou

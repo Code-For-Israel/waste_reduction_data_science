@@ -60,6 +60,8 @@ def main():
         # Save checkpoint
         save_checkpoint(epoch, model)
 
+        # TODO There will be no iou / accuracy but probably mAP instead
+
         # Evaluate train set
         train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
         print(f'Train IoU = {round(float(train_mean_iou), 4)}, Accuracy = {round(float(train_mean_accuracy), 4)}')
