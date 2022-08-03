@@ -46,7 +46,7 @@ class TrucksDataset(Dataset):
 
     def __getitem__(self, i):
         # TrucksDataset mean
-        mean = [0.5244, 0.4904, 0.4781]
+        mean = constants.TRUCKS_DATASET_MEAN
 
         # MaskDataset train set mean and std
         filename_without_extension, image, boxes, labels = self.data[i]  # str, PIL, tensor, tensor
@@ -128,11 +128,15 @@ class TrucksDataset(Dataset):
         annotations_path = filename_without_extension + '.txt'
 
         boxes, labels = self.extract_bboxes_and_labels_from_annotations_txt(annotations_path)
+        if not len(boxes):  # Image with no annotations, so we add a made up box with label of background (background=0)
+            boxes.append([.0, .0, .0, .0])
+            labels.append(0)
 
         boxes = torch.FloatTensor(boxes)  # shape (n_boxes, 4), each box is [center_x, center_y, width, height]
         boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is
         labels = torch.LongTensor(labels)  # shape (n_boxes)
 
+        print(boxes, labels)
         # Read image
         image = Image.open(os.path.join(self.data_folder, image_path), mode='r').convert('RGB')
 

@@ -9,15 +9,16 @@ import os
 def evaluate(loader, model, save_csv=False, verbose=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    all_images_boxes = list()
-    all_images_labels = list()
-    all_images_scores = list()
+    detected_images_boxes = list()
+    detected_images_labels = list()
+    detected_images_scores = list()
 
     model.eval()
     with torch.no_grad():
-        for i, (images, _) in enumerate(loader):
+        for i, (images, targets) in enumerate(loader):
             # Move to default device
             images = [image.to(device) for image in images]
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
             # Forward prop
             res = model(images)
@@ -26,29 +27,24 @@ def evaluate(loader, model, save_csv=False, verbose=False):
                 boxes = res[k].get("boxes", None)
                 labels = res[k].get("labels", None)
                 scores = res[k].get("scores", None)
-                if boxes is not None and labels is not None and scores is not None \
-                        and torch.numel(boxes) != 0 and torch.numel(labels) != 0 and torch.numel(scores) != 0:
-                    # [xmin, ymin, xmax, ymax] non-fractional
-                    # Note: one box because our faster rcnn model defined with box_detections_per_img=1
-                    all_images_boxes.append(boxes[0].to(device))
-                    all_images_labels.append(labels[0].to(device))
-                    all_images_scores.append(scores[0].to(device))
-                else:
-                    all_images_boxes.append(torch.FloatTensor([0., 0., 224., 224.]).to(device))
-                    all_images_labels.append(torch.IntTensor([0]).to(device))
-                    all_images_scores.append(torch.FloatTensor([0.]).to(device))
+                # TODO What happens if one of them is None?
+
+                detected_images_boxes.append(boxes)
+                detected_images_labels.append(labels)
+                detected_images_scores.append(scores)
+
             del images, res, boxes, labels, scores
 
     filenames = loader.dataset.filenames
     imgs_orig_sizes = loader.dataset.sizes
 
     # convert boxes back to their original sizes by the original width, height
-    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(all_images_boxes)]
+    predicted_boxes = [box * imgs_orig_sizes[i].to(device) / 224 for i, box in enumerate(detected_images_boxes)]
 
     # convert to [x_min, y_min, w, h] format
     predicted_boxes = [[box[0][0], box[0][1], box[0][2] - box[0][0], box[0][3] - box[0][1]] for box in predicted_boxes]
 
-    predicted_labels = ['True' if label == 1 else 'False' for label in all_images_labels]
+    predicted_labels = ['True' if label == 1 else 'False' for label in detected_images_labels]
 
     # take true boxes from the filenames with format [x_min, y_min, w, h]
     true_boxes = [json.loads(filename.strip(".jpg").split("__")[1]) for filename in filenames]
@@ -71,7 +67,7 @@ def evaluate(loader, model, save_csv=False, verbose=False):
         results.to_csv(save_csv, index=False, header=True)
         print(f'saved results to {os.path.join(os.getcwd(), str(save_csv))}')
 
-    del predicted_boxes, all_images_boxes, all_images_labels, all_images_scores
+    del predicted_boxes, detected_images_boxes, detected_images_labels, detected_images_scores
     torch.cuda.empty_cache()
 
     return mean_accuracy, mean_iou
