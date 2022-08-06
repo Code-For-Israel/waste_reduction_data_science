@@ -60,22 +60,22 @@ def main():
         # Save checkpoint
         save_checkpoint(epoch, model)
 
-        # TODO There will be no iou / accuracy but probably mAP instead
-
         # Evaluate train set
-        train_mean_accuracy, train_mean_iou = evaluate(unshuffled_train_loader, model)
-        print(f'Train IoU = {round(float(train_mean_iou), 4)}, Accuracy = {round(float(train_mean_accuracy), 4)}')
+        train_APs, train_mAP = evaluate(unshuffled_train_loader, model)
+        print(f'[Train set] Class-wise average precisions: {train_APs}')
+        print(f'[Train set] Mean Average Precision (mAP): {round(train_mAP, 3)}')
 
         # Evaluate test set
-        test_mean_accuracy, test_mean_iou = evaluate(test_loader, model)
-        print(f'Test IoU = {round(float(test_mean_iou), 4)}, Accuracy = {round(float(test_mean_accuracy), 4)}')
+        test_APs, test_mAP = evaluate(test_loader, model)
+        print(f'[Test set] Class-wise average precisions: {test_APs}')
+        print(f'[Test set] Mean Average Precision (mAP): {round(test_mAP, 3)}')
 
         # Populate dict
         metrics['train_loss'].append(train_loss)
-        metrics['train_iou'].append(train_mean_iou)
-        metrics['train_accuracy'].append(train_mean_accuracy)
-        metrics['test_iou'].append(test_mean_iou)
-        metrics['test_accuracy'].append(test_mean_accuracy)
+        metrics['train_APs'].append(train_APs)
+        metrics['train_mAP'].append(train_mAP)
+        metrics['test_APs'].append(test_APs)
+        metrics['test_mAP'].append(test_mAP)
 
         # Save all the losses to pickled list
         with open('metrics.pkl', 'wb') as f:
@@ -123,13 +123,13 @@ def train(train_loader, model, optimizer, epoch):
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
 
         # Print gradients norms to know what max_norm to give
-        # max_norm = 0
-        # for name, param in model.named_parameters():
-        #     norm = param.grad.norm(2)
-        #     # print(name, norm)
-        #     if norm > max_norm:
-        #         max_norm = norm
-        # print(f'MAX NORM = {max_norm}')
+        max_norm = 0
+        for name, param in model.named_parameters():
+            norm = param.grad.norm(2)
+            # print(name, norm)
+            if norm > max_norm:
+                max_norm = norm
+        print(f'MAX NORM = {max_norm}')
 
         # Update model
         optimizer.step()

@@ -8,7 +8,7 @@ from matplotlib import patches
 from utils import calc_iou
 from matplotlib.ticker import StrMethodFormatter
 
-# TODO Find better way with utils.py from sgrvinod repo
+# TODO Find better way to plot? with utils.py from sgrvinod repo
 
 np.random.seed(42)
 image_dir = "/home/student/test"

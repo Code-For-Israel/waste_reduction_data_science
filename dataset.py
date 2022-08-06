@@ -13,6 +13,26 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
+def extract_bboxes_and_labels_from_annotations_txt(annotations_path) -> Tuple:
+    """
+    annotations_path: str, path to yolo1.1 like annotations txt file
+    with each row as "label center_x center_y width height" e.g.
+    3 0.628125 0.8166666666666667 0.115625 0.3
+
+    return tuple of two lists
+    """
+    boxes, labels = list(), list()
+    annotations = [row.strip().split(' ') for row in open(annotations_path).readlines()]
+    for annotation in annotations:
+        label, center_x, center_y, width, height = annotation
+        label = int(label)
+        center_x, center_y, width, height = float(center_x), float(center_y), float(width), float(height)
+        labels.append(label)
+        boxes.append([center_x, center_y, width, height])
+
+    return boxes, labels
+
+
 class TrucksDataset(Dataset):
     """
     call example: TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
@@ -27,7 +47,7 @@ class TrucksDataset(Dataset):
         # Read data file names
         # self.filenames = ['img00010000351_06_02_2022T15_16_52', 'img00010000352_06_02_2022T15_29_06', ...]
         self.filenames = [filename for filename in sorted(os.listdir(data_folder)) if
-                          '.txt' in filename or '.jpg' in filename]
+                          filename.startswith('img') and ('.txt' in filename or '.jpg' in filename)]
         self.filenames = sorted(set([filename.replace('.txt', '').replace('.jpg', '') for filename in self.filenames]))
 
         # Load data to RAM using multiprocess
@@ -56,7 +76,8 @@ class TrucksDataset(Dataset):
         image, boxes, labels = image.copy(), boxes.clone(), labels.clone()
         if self.split == 'TRAIN':
             if random.random() < 0.8:  # with probability of 80% try augmentations
-                # A series of photometric distortions in random order, each with 50% chance of occurrence, as in Caffe repo
+                # A series of photometric distortions in random order,
+                # each with 50% chance of occurrence, as in Caffe repo
                 if random.random() < 0.5:
                     image = photometric_distort(image)
 
@@ -81,13 +102,11 @@ class TrucksDataset(Dataset):
 
         # non-fractional for Fast-RCNN
         image, boxes = resize(image, boxes, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
-        boxes = boxes.clamp(0., 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
 
-        # No normalize for Fast-RCNN
-
+        # No normalization for Fast-RCNN
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         area = torch.as_tensor(area, dtype=torch.float32)
 
@@ -102,32 +121,12 @@ class TrucksDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def extract_bboxes_and_labels_from_annotations_txt(self, annotations_path) -> Tuple:
-        """
-        annotations_path: str, path to yolo1.1 like annotations txt file
-        with each row as "label center_x center_y width height" e.g.
-        3 0.628125 0.8166666666666667 0.115625 0.3
-
-        return tuple of two lists
-        """
-        boxes, labels = list(), list()
-        annotations = [row.strip().split(' ') for row in
-                       open(os.path.join(self.data_folder, annotations_path)).readlines()]
-        for annotation in annotations:
-            label, center_x, center_y, width, height = annotation
-            label = int(label)
-            center_x, center_y, width, height = float(center_x), float(center_y), float(width), float(height)
-            labels.append(label)
-            boxes.append([center_x, center_y, width, height])
-
-        return boxes, labels
-
     def load_single_img_and_data(self, filename_without_extension: str):
         assert '.txt' not in filename_without_extension and '.jpg' not in filename_without_extension
         image_path = filename_without_extension + '.jpg'
         annotations_path = filename_without_extension + '.txt'
 
-        boxes, labels = self.extract_bboxes_and_labels_from_annotations_txt(annotations_path)
+        boxes, labels = extract_bboxes_and_labels_from_annotations_txt(os.path.join(self.data_folder, annotations_path))
         if not len(boxes):  # Image with no annotations, so we add a made up box with label of background (background=0)
             boxes.append([.0, .0, .0, .0])
             labels.append(0)

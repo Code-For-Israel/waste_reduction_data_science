@@ -50,7 +50,11 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
                                     image_std=std,
                                     min_size=224,
                                     max_size=224,
+                                    box_score_thresh=0.5,
+                                    # 0.5 is default (during inference,
+                                    # only return proposals with a classification score greater than box_score_thresh)
                                     box_detections_per_img=100,  # 100 is the default
+                                    # (maximum number of detections per image, for all classes.)
                                     )
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=4)  # classes + 1 (background)
