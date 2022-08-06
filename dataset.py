@@ -136,7 +136,6 @@ class TrucksDataset(Dataset):
         boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is
         labels = torch.LongTensor(labels)  # shape (n_boxes)
 
-        print(boxes, labels)
         # Read image
         image = Image.open(os.path.join(self.data_folder, image_path), mode='r').convert('RGB')
 

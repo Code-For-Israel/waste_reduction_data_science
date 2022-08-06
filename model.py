@@ -15,7 +15,7 @@ from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 def resnet_fpn_backbone(backbone_name, pretrained):
     backbone = resnet.__dict__[backbone_name](
         pretrained=pretrained,
-        norm_layer=misc_nn_ops.BatchNorm2d)
+        norm_layer=misc_nn_ops.FrozenBatchNorm2d)
 
     return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
 
