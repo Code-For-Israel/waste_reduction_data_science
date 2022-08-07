@@ -10,6 +10,24 @@ rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def get_mean_and_std(dataloader):
+    channels_sum, channels_squared_sum, num_batches = 0, 0, 0
+    for images, _ in dataloader:
+        data = torch.stack([image.to(device) for image in images])
+
+        # Mean over batch, height and width, but not over the channels
+        channels_sum += torch.mean(data, dim=[0, 2, 3])
+        channels_squared_sum += torch.mean(data ** 2, dim=[0, 2, 3])
+        num_batches += 1
+
+    mean = channels_sum / num_batches
+
+    # std = sqrt(E[X^2] - (E[X])^2)
+    std = (channels_squared_sum / num_batches - mean ** 2) ** 0.5
+
+    return dict(mean=mean, std=std)
+
+
 def calc_iou(bbox_a, bbox_b):
     """
     Calculate intersection over union (IoU) between two bounding boxes with a (x, y, w, h) format.

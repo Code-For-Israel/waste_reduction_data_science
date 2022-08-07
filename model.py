@@ -8,14 +8,16 @@ from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 
 
 # TODO
-#   Use fasterrcnn_resnet50_fpn_v2
-#   Maybe consider https://rwightman.github.io/pytorch-image-models/models/inception-resnet-v2/
+#   Use fasterrcnn_resnet50_fpn_v2 from: https://github.com/pytorch/vision/blob/main/torchvision/models/detection/faster_rcnn.py
+#   https://github.com/pytorch/vision/blob/main/torchvision/models/detection/backbone_utils.py
+#   WideResNet? "wide_resnet50_2" as backbone_name
+#   Or maybe consider https://rwightman.github.io/pytorch-image-models/models/inception-resnet-v2/
 
 
 def resnet_fpn_backbone(backbone_name, pretrained):
     backbone = resnet.__dict__[backbone_name](
         pretrained=pretrained,
-        norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+        norm_layer=misc_nn_ops.FrozenBatchNorm2d)  # TODO Try without FrozenBatchNorm2d >> BatchNorm2d
 
     return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
 
@@ -30,7 +32,7 @@ def resnet_fpn_backbone(backbone_name, pretrained):
     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
 
 
-def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=False, **kwargs):
+def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=True, **kwargs):
     backbone = resnet_fpn_backbone('resnet50', pretrained_backbone)
     model = FasterRCNN(backbone, num_classes, **kwargs)
     return model
@@ -45,7 +47,7 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
     std = TRUCKS_DATASET_STD
 
     # Initialize model
-    model = fasterrcnn_resnet50_fpn(pretrained_backbone=False,
+    model = fasterrcnn_resnet50_fpn(pretrained_backbone=True,
                                     image_mean=mean,
                                     image_std=std,
                                     min_size=224,

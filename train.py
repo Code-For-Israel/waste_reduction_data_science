@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Learning parameters
 batch_size = 42  # batch size (We trained with 42)
 workers = 4  # number of workers for loading data in the DataLoader
-print_freq = 10  # print training status every __ batches
+print_freq = 1  # print training status every __ batches
 lr = 1e-3  # learning rate
 
 cudnn.benchmark = True
@@ -33,22 +33,22 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Custom dataloaders
-    train_dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    train_dataset = TrucksDataset(data_folder=constants.TRAIN_DIRECTORY_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                num_workers=workers, pin_memory=True, collate_fn=collate_fn)
-    test_dataset = TrucksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
+    test_dataset = TrucksDataset(data_folder=constants.TEST_DIRECTORY_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
                                               num_workers=workers, pin_memory=True, collate_fn=collate_fn)
 
     # set split = test to avoid augmentations
-    unshuffled_train_dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='test')
+    unshuffled_train_dataset = TrucksDataset(data_folder=constants.TRAIN_DIRECTORY_PATH, split='test')
     unshuffled_train_loader = torch.utils.data.DataLoader(unshuffled_train_dataset, batch_size=batch_size,
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
     epochs = 100
-    metrics = dict(train_loss=[], train_iou=[], train_accuracy=[],
-                   test_iou=[], test_accuracy=[])
+    metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
+                   test_APs=[], test_mAP=[])
     # Epochs
     for epoch in range(epochs):
         # One epoch's training

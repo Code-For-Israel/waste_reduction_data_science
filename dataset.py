@@ -35,7 +35,7 @@ def extract_bboxes_and_labels_from_annotations_txt(annotations_path) -> Tuple:
 
 class TrucksDataset(Dataset):
     """
-    call example: TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    call example: TrucksDataset(data_folder=constants.TRAIN_DIRECTORY_PATH, split='train')
     """
 
     def __init__(self, data_folder: str, split: str):
@@ -144,10 +144,10 @@ class TrucksDataset(Dataset):
 if __name__ == '__main__':
     # check TrucksDataset class
     # train
-    dataset = TrucksDataset(data_folder=constants.TRAIN_IMG_PATH, split='train')
+    dataset = TrucksDataset(data_folder=constants.TRAIN_DIRECTORY_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True, collate_fn=collate_fn)
     images, targets = next(iter(train_loader))
 
     # test
-    dataset = TrucksDataset(data_folder=constants.TEST_IMG_PATH, split='test')
+    dataset = TrucksDataset(data_folder=constants.TEST_DIRECTORY_PATH, split='test')
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)

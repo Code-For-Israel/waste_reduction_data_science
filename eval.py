@@ -1,13 +1,5 @@
 import torch
-import json
-import numpy as np
-import pandas as pd
 from utils import calculate_mAP
-import os
-from pprint import PrettyPrinter
-
-# Good formatting when printing the APs for each class and mAP
-pp = PrettyPrinter()
 
 
 def evaluate(loader, model, verbose=False):
