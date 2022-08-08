@@ -35,7 +35,8 @@ def evaluate(loader, model, verbose=False):
 
                 true_boxes.append(targets[k]['boxes'])
                 true_labels.append(targets[k]['labels'])
-                true_difficulties.append(torch.zeros_like(targets[k]['labels']))  # just for using `calculate_mAP()`
+                # TODO What should be the difficulties
+                true_difficulties.append(torch.ones_like(targets[k]['labels']))  # just for using `calculate_mAP()`
 
             del images, res, det_boxes, det_labels, det_scores
 
