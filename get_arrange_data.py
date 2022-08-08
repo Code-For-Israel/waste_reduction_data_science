@@ -73,21 +73,23 @@ def split_data_to_train_test_and_move_to_separate_folders(train_size_ratio, rele
 
 
 if __name__ == "__main__":
-    path_to_yolo1_1_annotations_zip_file = 'tagged_trucks_06_08_2022.zip'
+    path_to_yolo1_1_annotations_zip_file = 'tagged_trucks_07_08_2022.zip'
     annotations_directory = 'all_annotations'
     extract_annotations_zipfile(path_to_yolo1_1_annotations_zip_file=path_to_yolo1_1_annotations_zip_file,
                                 directory_to_extract_to=annotations_directory)
+
+    relevant_annotations_filenames = get_only_relevant_annotations_filenames(
+        annotations_directory=annotations_directory)
 
     bucket_name_with_jpg_images = 'tomer-waste'
     images_directory = 'all_images'
     download_images_from_s3_bucket(bukcet_name=bucket_name_with_jpg_images, directory_to_download_to=images_directory)
 
-    relevant_annotations_filenames = get_only_relevant_annotations_filenames(
-        annotations_directory=annotations_directory)
-
+    train_directory = 'train_data'
+    test_directory = 'test_data'
     split_data_to_train_test_and_move_to_separate_folders(train_size_ratio=0.8,
                                                           relevant_annotations_filenames=relevant_annotations_filenames,
                                                           all_annotations_directory=annotations_directory,
                                                           all_images_directory=images_directory,
-                                                          train_directory='train_data',
-                                                          test_directory='test_data')
+                                                          train_directory=train_directory,
+                                                          test_directory=test_directory)
