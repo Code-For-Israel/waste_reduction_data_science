@@ -28,10 +28,13 @@ def get_only_relevant_annotations_filenames(annotations_directory):
         boxes, labels = extract_bboxes_and_labels_from_annotations_txt(
             os.path.join(annotations_directory, 'obj_train_data', filename))
 
-        # In YOLO1.1 annotations files downloaded from CVAT label = 0 means General Truck
-        # (because how we defined the manual tagging project in CVAT)
-        # We don't want the images with General Truck (because it means we didn't manually tag this image)
-        if 0 not in labels:
+        # if 0 not in labels:
+        #  In YOLO1.1 annotations files downloaded from CVAT label = 0 means General Truck
+        #  (because how we defined the manual tagging project in CVAT)
+        #  We don't want the images with General Truck (because it means we didn't manually tag this image)
+        # and labels:
+        #  We only want images with at least one box, because FasterRCNN / FPN  TODO - make sure this is not possible
+        if 0 not in labels and labels:
             # Under sample the class `truck_not_relevant` (label = 3)
             if set(labels) == {3}:
                 # Randomly get image that all the trucks in it are not relevant

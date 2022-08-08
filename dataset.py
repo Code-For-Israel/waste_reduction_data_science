@@ -127,9 +127,11 @@ class TrucksDataset(Dataset):
         annotations_path = filename_without_extension + '.txt'
 
         boxes, labels = extract_bboxes_and_labels_from_annotations_txt(os.path.join(self.data_folder, annotations_path))
-        if not len(boxes):  # Image with no annotations, so we add a made up box with label of background (background=0)
-            boxes.append([.0, .0, .0, .0])
-            labels.append(0)
+
+        # TODO Delete following 3 lines if all training images contain at least one box (no negative training)
+        # if not len(boxes):  # Image with no annotations, so we add a made up box with label of background (background=0)
+        #     boxes.append([.0, .0, .0, .0])
+        #     labels.append(0)
 
         boxes = torch.FloatTensor(boxes)  # shape (n_boxes, 4), each box is [center_x, center_y, width, height]
         boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is

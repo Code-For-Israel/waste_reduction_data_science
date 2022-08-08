@@ -12,8 +12,8 @@ from dataset import collate_fn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Learning parameters
-batch_size = 10  # batch size (We trained with 42)
+# Learning parameters TODO Choose parameters
+batch_size = 10  # batch size
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 1  # print training status every __ batches
 lr = 1e-3  # learning rate
@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 100
+    epochs = 10  # TODO More epochs
     metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
                    test_APs=[], test_mAP=[])
     # Epochs
@@ -119,8 +119,8 @@ def train(train_loader, model, optimizer, epoch):
         optimizer.zero_grad()
         losses.backward()
 
-        # Clipping
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
+        # Clipping - TODO needed?
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
 
         # Print gradients norms to know what max_norm to give
         max_norm = 0
