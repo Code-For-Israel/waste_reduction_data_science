@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 10  # TODO More epochs
+    epochs = 100  # TODO More epochs
     metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
                    test_APs=[], test_mAP=[])
     # Epochs
@@ -57,8 +57,9 @@ def main():
                            optimizer=optimizer,
                            epoch=epoch)
 
-        # Save checkpoint
-        save_checkpoint(epoch, model)
+        if epoch % 5 == 0:  # TODO remove this if to save every epoch
+            # Save checkpoint
+            save_checkpoint(epoch, model)
 
         # Evaluate train set
         train_APs, train_mAP = evaluate(unshuffled_train_loader, model)

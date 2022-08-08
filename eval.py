@@ -31,6 +31,8 @@ def evaluate(loader, model, verbose=False):
                 detected_boxes.append(det_boxes)
                 detected_labels.append(det_labels)
                 detected_scores.append(det_scores)
+                print(det_boxes, '\n', det_labels, '\n', det_scores, '\n')  # TODO DEL
+
                 true_boxes.append(targets[k]['boxes'])
                 true_labels.append(targets[k]['labels'])
                 true_difficulties.append(torch.zeros_like(targets[k]['labels']))  # just for using `calculate_mAP()`
