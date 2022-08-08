@@ -13,7 +13,7 @@ from dataset import collate_fn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters
-batch_size = 42  # batch size (We trained with 42)
+batch_size = 10  # batch size (We trained with 42)
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 1  # print training status every __ batches
 lr = 1e-3  # learning rate
