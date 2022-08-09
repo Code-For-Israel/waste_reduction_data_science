@@ -106,7 +106,7 @@ def photometric_distort(image):
 
     for d in distortions:
         if random.random() < 0.5:
-            if d.__name__ is 'adjust_hue':
+            if d.__name__ == 'adjust_hue':
                 # Caffe repo uses a 'hue_delta' of 18 - we divide by 255 because PyTorch needs a normalized value
                 adjust_factor = random.uniform(-18 / 255., 18 / 255.)
             else:
@@ -288,6 +288,16 @@ def resize(image, box, dims=(224, 224), return_percent_coords=True):
         new_box = new_box * new_dims
 
     return new_image, new_box
+
+
+def transform_box_from_fractional_to_non_fractional(box, dims=(224, 224)):
+    """
+    dims = (height, width)
+    """
+    new_dims = torch.FloatTensor([dims[1], dims[0], dims[1], dims[0]]).unsqueeze(0)
+    new_box = box * new_dims
+
+    return new_box
 
 
 def save_checkpoint(epoch, model):

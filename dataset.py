@@ -49,11 +49,10 @@ class TrucksDataset(Dataset):
         self.filenames = [filename for filename in sorted(os.listdir(data_folder)) if
                           filename.startswith('img') and ('.txt' in filename or '.jpg' in filename)]
         self.filenames = sorted(set([filename.replace('.txt', '').replace('.jpg', '') for filename in self.filenames]))
-
         # Load data to RAM using multiprocess
         self.data = []
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(1) as executor:  # TODO Number of threads
             futures = [executor.submit(self.load_single_img_and_data, filename) for filename in self.filenames]
             self.data = [fut.result() for fut in futures]
         self.data = sorted(self.data, key=lambda x: x[0])  # sort the filenames to reproduce results
@@ -102,6 +101,7 @@ class TrucksDataset(Dataset):
 
         # non-fractional for Fast-RCNN
         image, boxes = resize(image, boxes, dims=(224, 224), return_percent_coords=False)  # PIL, tensor
+        boxes = boxes.clamp(0., 224.)
 
         # Convert PIL image to Torch tensor
         image = FT.to_tensor(image)
@@ -115,8 +115,6 @@ class TrucksDataset(Dataset):
                       image_id=torch.tensor([torch.tensor(int(image_id))]),
                       area=area,
                       iscrowd=torch.zeros_like(labels, dtype=torch.int64))
-
-        print('__getitem__', target['image_id'], boxes)  # TODO DEL
 
         return image, target  # image is a tensor in [0, 1] (aka pixels divided by 255)
 
@@ -142,13 +140,11 @@ class TrucksDataset(Dataset):
         # shape (n_boxes, 4), each box is [c_x, c_y, w, h] fractional
         boxes = torch.FloatTensor(boxes)
 
-        # shape (n_boxes, 4), each box is [c_x, c_y, w, h] non-fractional
-        _, boxes = resize(image, boxes, dims=(image.height, image.width), return_percent_coords=False)
-
-        # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max] non-fractional
+        # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max] fractional
         boxes = cxcy_to_xy(boxes)
 
-        print('load_single_img_and_data', filename_without_extension, boxes)  # TODO DEL
+        # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max] non-fractional
+        boxes = transform_box_from_fractional_to_non_fractional(boxes, dims=(image.height, image.width))
 
         labels = torch.LongTensor(labels)  # shape (n_boxes)
 
