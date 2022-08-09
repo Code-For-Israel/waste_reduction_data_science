@@ -128,16 +128,16 @@ def train(train_loader, model, optimizer, epoch):
               any([torch.isnan(p).any() for p in model.parameters()]))
 
         # Clipping - TODO needed?
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
 
         # Print gradients norms to know what max_norm to give
-        max_norm = 0
-        for name, param in model.named_parameters():
-            norm = param.grad.norm(2)
-            # print(name, norm)
-            if norm > max_norm:
-                max_norm = norm
-        print(f'MAX NORM = {max_norm}')
+        # max_norm = 0
+        # for name, param in model.named_parameters():
+        #     norm = param.grad.norm(2)
+        #     # print(name, norm)
+        #     if norm > max_norm:
+        #         max_norm = norm
+        # print(f'MAX NORM = {max_norm}')
 
         # Update model
         optimizer.step()

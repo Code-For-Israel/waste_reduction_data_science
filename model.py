@@ -32,7 +32,7 @@ from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 #     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
 
 
-def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=True, **kwargs):
+def fasterrcnn_resnet50_fpn(num_classes=4, pretrained_backbone=True, **kwargs):
     backbone = resnet_fpn_backbone('resnet50', pretrained_backbone)
     model = FasterRCNN(backbone, num_classes, **kwargs)
     return model
