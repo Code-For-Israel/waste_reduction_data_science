@@ -109,10 +109,6 @@ def train(train_loader, model, optimizer, epoch):
         images = [image.to(device) for image in images]
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        # TODO DEL
-        # for k in range(len(targets)):
-        #     print('train: true_boxes ', targets[k]['image_id'], targets[k]['boxes']),
-
         # Forward prop
         loss_dict = model(images, targets)
 
@@ -131,7 +127,7 @@ def train(train_loader, model, optimizer, epoch):
               any([torch.isnan(p).any() for p in model.parameters()]))
 
         # Clipping - TODO needed?
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
 
         # Print gradients norms to know what max_norm to give
         max_norm = 0
