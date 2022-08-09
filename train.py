@@ -116,9 +116,14 @@ def train(train_loader, model, optimizer, epoch):
         losses = sum(loss for loss in loss_dict.values())
         loss_value = losses.item()
 
+        print('loss_value ', loss_value)  # TODO Del
+
         # Backward prop.
         optimizer.zero_grad()
         losses.backward()
+
+        print('model params contain at least 1 nan: ',
+              any([torch.isnan(p).any() for p in model.parameters()]))
 
         # Clipping - TODO needed?
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)
