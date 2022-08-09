@@ -16,8 +16,8 @@ def collate_fn(batch):
 def extract_bboxes_and_labels_from_annotations_txt(annotations_path) -> Tuple:
     """
     annotations_path: str, path to yolo1.1 like annotations txt file
-    with each row as "label center_x center_y width height" e.g.
-    3 0.628125 0.8166666666666667 0.115625 0.3
+    with each row as "label center_x center_y width height" ([c_x, c_y, w, h])
+    e.g.              3 0.628125 0.816667 0.125 0.3
 
     return tuple of two lists
     """
@@ -66,7 +66,7 @@ class TrucksDataset(Dataset):
 
     def __getitem__(self, i):
         # TrucksDataset mean
-        mean = constants.TRUCKS_DATASET_MEAN
+        mean = constants.TRUCKS_DATASET_MEAN  # TODO Calculate mean and std
 
         # MaskDataset train set mean and std
         filename_without_extension, image, boxes, labels = self.data[i]  # str, PIL, tensor, tensor
@@ -134,7 +134,7 @@ class TrucksDataset(Dataset):
         #     labels.append(0)
 
         boxes = torch.FloatTensor(boxes)  # shape (n_boxes, 4), each box is [center_x, center_y, width, height]
-        boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is
+        boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max]
         labels = torch.LongTensor(labels)  # shape (n_boxes)
 
         # Read image

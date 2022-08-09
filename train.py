@@ -14,9 +14,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters TODO Choose parameters
 batch_size = 10  # batch size
-workers = 4  # number of workers for loading data in the DataLoader
+workers = 1  # number of workers for loading data in the DataLoader
 print_freq = 1  # print training status every __ batches
-lr = 1e-3  # learning rate
+lr = 1e-5  # learning rate
 
 cudnn.benchmark = True
 
@@ -108,6 +108,9 @@ def train(train_loader, model, optimizer, epoch):
         # Move to default device
         images = [image.to(device) for image in images]
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        for k in len(targets):
+            print('true_boxes ', targets[k]['boxes']),
 
         # Forward prop
         loss_dict = model(images, targets)
