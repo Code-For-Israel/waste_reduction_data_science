@@ -116,6 +116,8 @@ class TrucksDataset(Dataset):
                       area=area,
                       iscrowd=torch.zeros_like(labels, dtype=torch.int64))
 
+        print('__getitem__', target['image_id'], boxes)  # TODO DEL
+
         return image, target  # image is a tensor in [0, 1] (aka pixels divided by 255)
 
     def __len__(self):
@@ -126,6 +128,10 @@ class TrucksDataset(Dataset):
         image_path = filename_without_extension + '.jpg'
         annotations_path = filename_without_extension + '.txt'
 
+        # Read image
+        image = Image.open(os.path.join(self.data_folder, image_path), mode='r').convert('RGB')
+
+        # Read labels and boxes
         boxes, labels = extract_bboxes_and_labels_from_annotations_txt(os.path.join(self.data_folder, annotations_path))
 
         # TODO Delete following 3 lines if all training images contain at least one box (no negative training)
@@ -133,12 +139,18 @@ class TrucksDataset(Dataset):
         #     boxes.append([.0, .0, .0, .0])
         #     labels.append(0)
 
-        boxes = torch.FloatTensor(boxes)  # shape (n_boxes, 4), each box is [center_x, center_y, width, height]
-        boxes = cxcy_to_xy(boxes)  # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max]
-        labels = torch.LongTensor(labels)  # shape (n_boxes)
+        # shape (n_boxes, 4), each box is [c_x, c_y, w, h] fractional
+        boxes = torch.FloatTensor(boxes)
 
-        # Read image
-        image = Image.open(os.path.join(self.data_folder, image_path), mode='r').convert('RGB')
+        # shape (n_boxes, 4), each box is [c_x, c_y, w, h] non-fractional
+        _, boxes = resize(image, boxes, dims=(image.height, image.width), return_percent_coords=False)
+
+        # shape (n_boxes, 4), each box is [x_min, y_min, x_max, y_max] non-fractional
+        boxes = cxcy_to_xy(boxes)
+
+        print('load_single_img_and_data', filename_without_extension, boxes)  # TODO DEL
+
+        labels = torch.LongTensor(labels)  # shape (n_boxes)
 
         return filename_without_extension, image, boxes, labels  # str, PIL, tensor, tensor
 

@@ -273,6 +273,9 @@ def flip(image, boxes):
 
 
 def resize(image, box, dims=(224, 224), return_percent_coords=True):
+    """
+    dims = (height, width)
+    """
     # Resize image
     new_image = FT.resize(image, dims)
 
