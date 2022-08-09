@@ -2,7 +2,7 @@ import torch
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models import resnet
 from torchvision.ops import misc as misc_nn_ops
-from torchvision.models.detection.backbone_utils import BackboneWithFPN
+from torchvision.models.detection.backbone_utils import BackboneWithFPN, resnet_fpn_backbone
 from torchvision.models.detection.faster_rcnn import FasterRCNN
 from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 
@@ -14,22 +14,22 @@ from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 #   Or maybe consider https://rwightman.github.io/pytorch-image-models/models/inception-resnet-v2/
 
 # TODO Maybe take the original function from torchvision?
-def resnet_fpn_backbone(backbone_name, pretrained):
-    backbone = resnet.__dict__[backbone_name](
-        pretrained=pretrained,
-        norm_layer=misc_nn_ops.FrozenBatchNorm2d)  # TODO Try without FrozenBatchNorm2d >> BatchNorm2d
-
-    return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
-
-    in_channels_stage2 = backbone.inplanes // 8
-    in_channels_list = [
-        in_channels_stage2,
-        in_channels_stage2 * 2,
-        in_channels_stage2 * 4,
-        in_channels_stage2 * 8,
-    ]
-    out_channels = 256
-    return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
+# def resnet_fpn_backbone(backbone_name, pretrained):
+#     backbone = resnet.__dict__[backbone_name](
+#         pretrained=pretrained,
+#         norm_layer=misc_nn_ops.FrozenBatchNorm2d)  # TODO Try without FrozenBatchNorm2d >> BatchNorm2d
+#
+#     return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
+#
+#     in_channels_stage2 = backbone.inplanes // 8
+#     in_channels_list = [
+#         in_channels_stage2,
+#         in_channels_stage2 * 2,
+#         in_channels_stage2 * 4,
+#         in_channels_stage2 * 8,
+#     ]
+#     out_channels = 256
+#     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
 
 
 def fasterrcnn_resnet50_fpn(num_classes=91, pretrained_backbone=True, **kwargs):
@@ -47,11 +47,12 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
     std = TRUCKS_DATASET_STD
 
     # Initialize model
-    model = fasterrcnn_resnet50_fpn(pretrained_backbone=False,  # TODO What we want?
+    model = fasterrcnn_resnet50_fpn(pretrained_backbone=True,  # TODO What we want?
                                     image_mean=mean,
                                     image_std=std,
                                     min_size=224,
                                     max_size=224,
+                                    # TODO more parameters to adjust? overlap?
                                     box_score_thresh=0.5,
                                     # 0.5 is default (during inference,
                                     # only return proposals with a classification score greater than box_score_thresh)
