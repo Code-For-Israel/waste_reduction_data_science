@@ -109,7 +109,7 @@ def train(train_loader, model, optimizer, epoch):
         images = [image.to(device) for image in images]
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        for k in len(targets):
+        for k in range(len(targets)):
             print('true_boxes ', targets[k]['boxes']),
 
         # Forward prop
