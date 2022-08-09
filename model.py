@@ -13,7 +13,7 @@ from constants import TRUCKS_DATASET_MEAN, TRUCKS_DATASET_STD
 #   WideResNet? "wide_resnet50_2" as backbone_name
 #   Or maybe consider https://rwightman.github.io/pytorch-image-models/models/inception-resnet-v2/
 
-
+# TODO Maybe take the original function from torchvision?
 def resnet_fpn_backbone(backbone_name, pretrained):
     backbone = resnet.__dict__[backbone_name](
         pretrained=pretrained,
@@ -47,7 +47,7 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
     std = TRUCKS_DATASET_STD
 
     # Initialize model
-    model = fasterrcnn_resnet50_fpn(pretrained_backbone=True,
+    model = fasterrcnn_resnet50_fpn(pretrained_backbone=False,  # TODO What we want?
                                     image_mean=mean,
                                     image_std=std,
                                     min_size=224,

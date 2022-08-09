@@ -63,13 +63,15 @@ def main():
 
         # Evaluate train set
         train_APs, train_mAP = evaluate(unshuffled_train_loader, model)
-        print(f'[Train set] Class-wise average precisions: {train_APs}')
-        print(f'[Train set] Mean Average Precision (mAP): {round(train_mAP, 3)}')
+        # TODO UNCOMMENT
+        # print(f'[Train set] Class-wise average precisions: {train_APs}')
+        # print(f'[Train set] Mean Average Precision (mAP): {round(train_mAP, 3)}')
 
         # Evaluate test set
         test_APs, test_mAP = evaluate(test_loader, model)
-        print(f'[Test set] Class-wise average precisions: {test_APs}')
-        print(f'[Test set] Mean Average Precision (mAP): {round(test_mAP, 3)}')
+        # TODO UNCOMMENT
+        # print(f'[Test set] Class-wise average precisions: {test_APs}')
+        # print(f'[Test set] Mean Average Precision (mAP): {round(test_mAP, 3)}')
 
         # Populate dict
         metrics['train_loss'].append(train_loss)
