@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Learning parameters TODO Choose parameters
 batch_size = 10  # batch size
 workers = 1  # number of workers for loading data in the DataLoader
-print_freq = 1  # print training status every __ batches
+print_freq = 20  # print training status every __ batches
 lr = 1e-5  # learning rate
 
 cudnn.benchmark = True
@@ -124,8 +124,9 @@ def train(train_loader, model, optimizer, epoch):
         losses.backward()
 
         # TODO DEL /  COMMENT
-        print('model params contain at least 1 nan: ',
-              any([torch.isnan(p).any() for p in model.parameters()]))
+        nan_in_model_params = any([torch.isnan(p).any() for p in model.parameters()])
+        if nan_in_model_params:
+            print('[WARNING] model params contain at least 1 nan value!!')
 
         # Clipping - TODO needed?
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1, norm_type=2)

@@ -32,9 +32,9 @@ def evaluate(loader, model, verbose=False):
                 detected_labels.append(det_labels)
                 detected_scores.append(det_scores)
                 # if len(det_boxes):  # TODO DEL prints and if
-                print('------', targets[k]['image_id'], '------')
-                print('det_boxes ', det_boxes)
-                print('true_boxes ', targets[k]['boxes']),
+                # print('------', targets[k]['image_id'], '------')
+                # print('det_boxes ', det_boxes)
+                # print('true_boxes ', targets[k]['boxes']),
 
                 true_boxes.append(targets[k]['boxes'])
                 true_labels.append(targets[k]['labels'])
