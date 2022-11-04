@@ -156,7 +156,10 @@ if __name__ == '__main__':
     # train
     dataset = TrucksDataset(data_folder=constants.TRAIN_DIRECTORY_PATH, split='train')
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True, collate_fn=collate_fn)
-    images, targets = next(iter(train_loader))
+    # images, targets = next(iter(train_loader))
+
+    # get mean and std for train images pixels
+    print(get_mean_and_std(train_loader))
 
     # test
     dataset = TrucksDataset(data_folder=constants.TEST_DIRECTORY_PATH, split='test')

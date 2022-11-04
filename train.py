@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 1000  # TODO More epochs
+    epochs = 10  # TODO More epochs
     metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
                    test_APs=[], test_mAP=[])
     # Epochs
@@ -58,19 +58,19 @@ def main():
                            epoch=epoch)
 
         # Save checkpoint - TODO UNCOMMENT
-        # save_checkpoint(epoch, model)
+        save_checkpoint(epoch, model)
 
         # Evaluate train set
         train_APs, train_mAP = evaluate(unshuffled_train_loader, model)
         # TODO UNCOMMENT
-        # print(f'[Train set] Class-wise average precisions: {train_APs}')
-        # print(f'[Train set] Mean Average Precision (mAP): {round(train_mAP, 3)}')
+        print(f'[Train set] Class-wise average precisions: {train_APs}')
+        print(f'[Train set] Mean Average Precision (mAP): {round(train_mAP, 3)}')
 
         # Evaluate test set
         test_APs, test_mAP = evaluate(test_loader, model)
         # TODO UNCOMMENT
-        # print(f'[Test set] Class-wise average precisions: {test_APs}')
-        # print(f'[Test set] Mean Average Precision (mAP): {round(test_mAP, 3)}')
+        print(f'[Test set] Class-wise average precisions: {test_APs}')
+        print(f'[Test set] Mean Average Precision (mAP): {round(test_mAP, 3)}')
 
         # Populate dict
         metrics['train_loss'].append(train_loss)
