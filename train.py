@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 10  # TODO More epochs
+    epochs = 200  # TODO More epochs
     metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
                    test_APs=[], test_mAP=[])
     # Epochs
