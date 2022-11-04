@@ -13,7 +13,7 @@ from dataset import collate_fn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Learning parameters TODO Choose parameters
-batch_size = 10  # batch size
+batch_size = 10  # batch size TODO for batch_size = 10 GPU memory: 2711MiB /  7680MiB
 workers = 1  # number of workers for loading data in the DataLoader
 print_freq = 20  # print training status every __ batches
 lr = 1e-5  # learning rate
@@ -46,7 +46,7 @@ def main():
                                                           shuffle=False, num_workers=workers, pin_memory=True,
                                                           collate_fn=collate_fn)
 
-    epochs = 200  # TODO More epochs
+    epochs = 100  # TODO set correct number of epochs
     metrics = dict(train_loss=[], train_APs=[], train_mAP=[],
                    test_APs=[], test_mAP=[])
     # Epochs

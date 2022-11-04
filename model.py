@@ -70,5 +70,9 @@ def get_fasterrcnn_resnet50_fpn(weights_path=None):
 
 if __name__ == '__main__':
     # test this module
+    # create model
     model = get_fasterrcnn_resnet50_fpn()
     print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+
+    # load model from checkpoint
+    model = get_fasterrcnn_resnet50_fpn(weights_path='checkpoint_fasterrcnn_epoch=48.pth.tar')
