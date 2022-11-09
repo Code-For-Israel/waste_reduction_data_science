@@ -1,196 +1,125 @@
-import os
+from dataset import *
+from model import get_fasterrcnn_resnet50_fpn
+import constants
+import warnings
+# For drawing onto the image
 import numpy as np
-import cv2
-import json
+from PIL import ImageColor
+from PIL import ImageDraw
+from PIL import ImageFont
+import torchvision.transforms as T
 import matplotlib.pyplot as plt
-import pandas as pd
-from matplotlib import patches
-from utils import calc_iou
-from matplotlib.ticker import StrMethodFormatter
 
-# TODO Find better way to plot? with utils.py from sgrvinod repo
-
-np.random.seed(42)
-image_dir = "/home/student/test"
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-def parse_images_and_bboxes(image_dir):
-    """
-    Parse a directory with filenames.
-    :param image_dir: Path to directory with filenames.
-    :return: A list with (filename, image_id, bbox, proper_mask) for every image in the image_dir.
-    """
-    example_filenames = os.listdir(image_dir)
-    data = []
-    for filename in example_filenames:
-        image_id, bbox, proper_mask = filename.strip(".jpg").split("__")
-        bbox = json.loads(bbox)
-        proper_mask = True if proper_mask.lower() == "true" else False
-        data.append((filename, image_id, bbox, proper_mask))
-    return data
-
-
-def show_images_and_bboxes(data, image_dir):
-    """
-    Plot filenames with bounding boxes. Predicts random bounding boxes and computes IoU.
-    :param data: Iterable with (filename, image_id, bbox, proper_mask) structure.
-    :param image_dir: Path to directory with filenames.
-    :return: None
-    """
-    for filename, image_id, bbox, proper_mask in data:
-        # Load image
-        im = cv2.imread(os.path.join(image_dir, filename))
-        # BGR to RGB
-        im = im[:, :, ::-1]
-        # Ground truth bbox
-        x1, y1, w1, h1 = bbox
-        # Predicted bbox
-        # x2, y2, w2, h2 = random_bbox_predict(bbox)
-        # Calculate IoU
-        # iou = calc_iou(bbox, (x2, y2, w2, h2))
-        # Plot image and bboxes
-        fig, ax = plt.subplots()
-        ax.imshow(im)
-        rect = patches.Rectangle((x1, y1), w1, h1,
-                                 linewidth=2, edgecolor='g', facecolor='none', label='ground-truth')
-        ax.add_patch(rect)
-        # rect = patches.Rectangle((x2, y2), w2, h2,
-        #                          linewidth=2, edgecolor='b', facecolor='none', label='predicted')
-        # ax.add_patch(rect)
-        # fig.suptitle(f"proper_mask={proper_mask}, IoU={iou:.2f}")
-        fig.suptitle(f"proper_mask={proper_mask}")
-        ax.axis('off')
-        fig.legend()
-        plt.show()
-
-
-def show_images_and_bboxes_from_predictions_df(path):
-    """
-    Plot filenames with bounding boxes. Predicts random bounding boxes and computes IoU.
-    :param path: path to final predictions.csv file, after evaluation of a model
-    :return: None
-    """
-    df = pd.read_csv(path)
-    df['true_box'] = df['filename'].apply(lambda x: [float(i) for i in x.split('__')[1][1:-1].split(',')])
-    df['true_label'] = df['filename'].apply(lambda x: x.split('__')[2][:-4])
-    df['iou'] = df.apply(lambda sample: calc_iou(sample.true_box, (sample.x, sample.y, sample.w, sample.h)), axis=1)
-    df = df.sort_values(by=['iou'])
-
-    confusion_matrix = pd.crosstab(df['true_label'], df['proper_mask'], rownames=['Actual'], colnames=['Predicted'])
-    print(confusion_matrix.values)
-
-    plot_iou_hist(df)
-    aux_plot_examples(df.head())
-    aux_plot_examples(df.tail())
-
-
-def plot_iou_hist(df):
-    ax = df.hist(column='iou', bins=20, grid=False, figsize=(12, 8), color='#86bf91', zorder=2,
-                 rwidth=0.9)
-
-    ax = ax[0]
-    for x in ax:
-
-        # Despine
-        x.spines['right'].set_visible(False)
-        x.spines['top'].set_visible(False)
-        x.spines['left'].set_visible(False)
-
-        # Switch off ticks
-        x.tick_params(bottom="off", top="off", labelbottom="on", left="off", right="off",
-                      labelleft="on")
-
-        # Draw horizontal axis lines
-        vals = x.get_yticks()
-        for tick in vals:
-            x.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
-
-        # Remove title
-        x.set_title("IOU Histogram")
-
-        # Set x-axis label
-        x.set_xlabel("IOU", labelpad=20, weight='bold', size=12)
-
-        # Set y-axis label
-        x.set_ylabel("Frequency", labelpad=20, weight='bold', size=12)
-
-        # Format y-axis label
-        x.yaxis.set_major_formatter(StrMethodFormatter('{x:,g}'))
+def display_image(image, title=''):
+    fig = plt.figure(figsize=(10, 10), dpi=200)
+    plt.grid(False)
+    plt.title(title, fontdict={'fontsize': 14})
+    plt.imshow(image)
+    # plt.savefig(f'{title}.png')
     plt.show()
 
 
-def aux_plot_examples(df):
-    for index, row in df.iterrows():
-        # Load image
-        im = cv2.imread(os.path.join(image_dir, row.filename))
-        # BGR to RGB
-        im = im[:, :, ::-1]
-        # Ground truth bbox
-        x1, y1, w1, h1 = row.true_box
-        # Predicted bbox
-        x2, y2, w2, h2 = row.x, row.y, row.w, row.h
-        # Calculate IoU
-        iou = calc_iou((x1, y1, w1, h1), (x2, y2, w2, h2))
-        # Plot image and bboxes
-        fig, ax = plt.subplots()
-        ax.imshow(im)
-        rect = patches.Rectangle((x1, y1), w1, h1,
-                                 linewidth=2, edgecolor='g', facecolor='none', label='ground-truth')
-        ax.add_patch(rect)
-        rect = patches.Rectangle((x2, y2), w2, h2,
-                                 linewidth=2, edgecolor='b', facecolor='none', label='predicted')
-        ax.add_patch(rect)
-        fig.suptitle(f"True label={row.true_label}, Predicted label={row.proper_mask}, IoU={iou:.2f}")
-        ax.axis('off')
-        fig.legend(loc='lower right')
-        plt.show()
+def draw_bounding_box_on_image(image,
+                               ymin,
+                               xmin,
+                               ymax,
+                               xmax,
+                               color,
+                               font,
+                               thickness=1,
+                               display_str_list=()):
+    """Adds a bounding box to an image."""
+    draw = ImageDraw.Draw(image)
+    im_width, im_height = image.size
+    (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
+                                  ymin * im_height, ymax * im_height)
+    draw.line([(left, top), (left, bottom), (right, bottom), (right, top),
+               (left, top)],
+              width=thickness,
+              fill=color)
+
+    # If the total height of the display strings added to the top of the bounding
+    # box exceeds the top of the image, stack the strings below the bounding box
+    # instead of above.
+    display_str_heights = [font.getsize(ds)[1] for ds in display_str_list]
+    # Each display_str has a top and bottom margin of 0.05x.
+    total_display_str_height = (1 + 2 * 0.05) * sum(display_str_heights)
+
+    if top > total_display_str_height:
+        text_bottom = top
+    else:
+        text_bottom = top + total_display_str_height
+    # Reverse list and print from bottom to top.
+    for display_str in display_str_list[::-1]:
+        text_width, text_height = font.getsize(display_str)
+        margin = np.ceil(0.05 * text_height)
+        draw.rectangle([(left, text_bottom - text_height - 2 * margin),
+                        (left + text_width, text_bottom)],
+                       fill=color)
+        draw.text((left + margin, text_bottom - text_height - margin),
+                  display_str,
+                  fill="black",
+                  font=font)
+        text_bottom -= text_height - 2 * margin
 
 
-def plot_one_metric(train_list, test_list, metric, mark_epoch=None):
-    """
-    Plot graph with train and test results.
-    :param train_list: train results values.
-    :param test_list: test results values.
-    :param metric: string of the metric name.
-    :return: None.
-    """
-    indices_list = [(1 + i) for i in range(len(train_list))]
-    plt.figure(figsize=(12, 2))
-    plt.plot(indices_list, train_list, '-', c="tab:blue", label=f'Train {metric}')
-    plt.plot(indices_list, test_list, '-', c="tab:orange", label=f'Test {metric}')
+def draw_boxes(image, boxes, class_names, scores, max_boxes=10, min_score=0.1):
+    """Overlay labeled boxes on an image with formatted scores and label names."""
+    colors = list(ImageColor.colormap.values())
+    colors = {'uncovered': '#ff7f7f', 'covered': '#7fffd4', 'other': '#f07fff'}
+    try:
+        font = ImageFont.truetype("LiberationSansNarrow-Bold.ttf", 12)
+    except IOError:
+        print("Font not found, using default font.")
+        font = ImageFont.load_default()
 
-    plt.plot(indices_list, train_list, 'o', color='tab:blue', markersize=4)
-    plt.plot(indices_list, test_list, 'o', color='tab:orange', markersize=4)
+    for i in range(min(boxes.shape[0], max_boxes)):
+        if scores[i] >= min_score:
+            xmin, ymin, xmax, ymax = tuple(boxes[i])
+            display_str = "{}: {}%".format(
+                class_names[i].decode("ascii") if type(class_names[i]) == bytes else class_names[i],
+                int(100 * scores[i]))
+            color = colors[class_names[i]]
+            image_pil = Image.fromarray(np.uint8(image)).convert("RGB")
+            draw_bounding_box_on_image(
+                image_pil,
+                ymin,
+                xmin,
+                ymax,
+                xmax,
+                color,
+                font,
+                display_str_list=[display_str])
+            np.copyto(dst=image, src=np.array(image_pil))
+    return image
 
-    # Mark the chosen epoch
-    if mark_epoch:
-        plt.plot([mark_epoch], train_list[mark_epoch - 1], 'o', color='tab:red', markersize=6)
-        plt.plot([mark_epoch], test_list[mark_epoch - 1], 'o', color='tab:red', markersize=6)
 
-    plt.xticks(np.arange(1, len(indices_list) + 1, step=1), fontsize=10, rotation=90)
-    plt.grid(linewidth=1)
-    plt.title(f'Train and test {metric} values along epochs')
-    plt.xlabel("Epochs")
-    plt.ylabel(f'{metric}')
-    plt.legend(loc='lower right' if metric != 'loss' else 'upper right')
-    plt.show()
+if __name__ == '__main__':
+    model = get_fasterrcnn_resnet50_fpn(weights_path='checkpoint_fasterrcnn_epoch=48.pth.tar')
+    model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # test
+    dataset = TrucksDataset(data_folder=constants.TEST_DIRECTORY_PATH, split='test')
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=False, collate_fn=collate_fn)
 
-if __name__ == "__main__":
-    # plot example filenames
-    # data = parse_images_and_bboxes(image_dir)
-    # show_images_and_bboxes(data, image_dir)
+    transform = T.ToPILImage()
+    images, targets = next(iter(test_loader))
+    images = [image.to(device) for image in images]
 
-    # plot sample of predicted BBs along the true ones
-    predictions_path = '/tmp/pycharm_project_388/prediction.csv'
-    show_images_and_bboxes_from_predictions_df(predictions_path)
+    res = model(images)
+    voc_labels = ('uncovered', 'covered', 'other')
+    label_map = {v + 1: k for v, k in enumerate(voc_labels)}
 
-    # plot the metrics graphs
-    # plot_one_metric(train_list=[0, 1, 2], test_list=[4, 5, 7], metric='loss')
-    # import pickle
-    #
-    # exp1_metrics = pickle.load(open('exp1 metrics.pkl.txt', 'rb'))
-    # plot_one_metric(train_list=exp1_metrics['train_loss'], test_list=exp1_metrics['test_loss'], metric='loss')
-    # plot_one_metric(train_list=exp1_metrics['train_iou'], test_list=exp1_metrics['test_iou'], metric='iou')
-    # plot_one_metric(train_list=exp1_metrics['train_accuracy'], test_list=exp1_metrics['test_accuracy'],
-    #                 metric='accuracy')
+    for k in range(len(images)):
+        img = np.array(transform(images[k]))
+        display_image(draw_boxes(image=img,
+                                 boxes=res[k].get('boxes').cpu().detach().numpy() / 224,
+                                 class_names=[label_map[label] for label in res[k].get('labels').cpu().numpy()],
+                                 scores=res[k].get('scores').cpu().detach().numpy()
+                                 ),
+                      f"image_id = {targets[k]['image_id'].item()}"
+                      )

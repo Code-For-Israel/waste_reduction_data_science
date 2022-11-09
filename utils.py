@@ -3,7 +3,7 @@ import torchvision.transforms.functional as FT
 import random
 
 # Label map
-voc_labels = ('truck_open', 'truck_close', 'truck_not_relevant')
+voc_labels = ('uncovered', 'covered', 'other')
 label_map = {k: v + 1 for v, k in enumerate(voc_labels)}
 label_map['background'] = 0
 rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
